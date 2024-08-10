@@ -88,7 +88,7 @@ public class TransportService extends AbstractLifecycleComponent
     }
 
     public static final String DIRECT_RESPONSE_PROFILE = ".direct";
-    public static final String HANDSHAKE_ACTION_NAME = "internal:transport/handshake";
+    public static String HANDSHAKE_ACTION_NAME = "internal:transport/handshake";
 
     private final AtomicBoolean handleIncomingRequests = new AtomicBoolean();
     private final DelegatingTransportMessageListener messageListener = new DelegatingTransportMessageListener();
@@ -470,6 +470,10 @@ public class TransportService extends AbstractLifecycleComponent
                 return null;
             }));
         };
+    }
+    
+    public static void setHandshakeAction(String action){
+        HANDSHAKE_ACTION_NAME = action;
     }
 
     /**

@@ -22,7 +22,7 @@ import org.elasticsearch.common.util.concurrent.ThreadContext;
 import java.io.IOException;
 import java.util.Set;
 
-abstract class OutboundMessage extends NetworkMessage {
+public abstract class OutboundMessage extends NetworkMessage {
 
     protected final Writeable message;
 
@@ -111,12 +111,12 @@ abstract class OutboundMessage extends NetworkMessage {
         threadContext.writeTo(stream);
     }
 
-    static class Request extends OutboundMessage {
+    public static class Request extends OutboundMessage {
 
         private final String[] features;
         private final String action;
 
-        Request(
+        public Request(
             ThreadContext threadContext,
             String[] features,
             Writeable message,
@@ -165,11 +165,11 @@ abstract class OutboundMessage extends NetworkMessage {
         }
     }
 
-    static class Response extends OutboundMessage {
+    public static class Response extends OutboundMessage {
 
         private final Set<String> features;
 
-        Response(
+        public Response(
             ThreadContext threadContext,
             Set<String> features,
             Writeable message,

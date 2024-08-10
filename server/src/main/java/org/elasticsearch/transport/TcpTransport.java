@@ -114,7 +114,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
     private volatile BoundTransportAddress boundAddress;
 
-    private final TransportHandshaker handshaker;
+    public TransportHandshaker handshaker;
     private final TransportKeepAlive keepAlive;
     private final OutboundHandler outboundHandler;
     private final InboundHandler inboundHandler;

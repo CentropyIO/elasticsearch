@@ -30,7 +30,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import java.io.IOException;
 import java.util.Set;
 
-final class OutboundHandler {
+public class OutboundHandler {
 
     private static final Logger logger = LogManager.getLogger(OutboundHandler.class);
 
@@ -45,7 +45,7 @@ final class OutboundHandler {
 
     private volatile TransportMessageListener messageListener = TransportMessageListener.NOOP_LISTENER;
 
-    OutboundHandler(
+    public OutboundHandler(
         String nodeName,
         Version version,
         String[] features,

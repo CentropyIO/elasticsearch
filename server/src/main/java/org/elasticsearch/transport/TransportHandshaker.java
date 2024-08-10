@@ -75,6 +75,10 @@ final class TransportHandshaker {
         }
     }
 
+    public static void setHandshakeAction(String action){
+        HANDSHAKE_ACTION_NAME = action;
+    }
+
     void handleHandshake(TransportChannel channel, long requestId, StreamInput stream) throws IOException {
         // Must read the handshake request to exhaust the stream
         HandshakeRequest handshakeRequest = new HandshakeRequest(stream);
