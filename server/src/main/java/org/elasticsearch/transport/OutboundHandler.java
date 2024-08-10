@@ -73,7 +73,7 @@ final class OutboundHandler {
      * Sends the request to the given channel. This method should be used to send {@link TransportRequest}
      * objects back to the caller.
      */
-    void sendRequest(
+    public void sendRequest(
         final DiscoveryNode node,
         final TcpChannel channel,
         final long requestId,
@@ -172,7 +172,7 @@ final class OutboundHandler {
         sendMessage(channel, message, listener);
     }
 
-    private void sendMessage(TcpChannel channel, OutboundMessage networkMessage, ActionListener<Void> listener) throws IOException {
+    public void sendMessage(TcpChannel channel, OutboundMessage networkMessage, ActionListener<Void> listener) throws IOException {
         final BytesStreamOutput bytesStreamOutput = new ReleasableBytesStreamOutput(bigArrays);
         final ActionListener<Void> wrappedListener = ActionListener.runBefore(listener, bytesStreamOutput::close);
         final BytesReference message;
