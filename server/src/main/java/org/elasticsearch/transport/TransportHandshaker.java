@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Sends and receives transport-level connection handshakes. This class will send the initial handshake,
  * manage state/timeouts while the handshake is in transit, and handle the eventual response.
  */
-final class TransportHandshaker {
+public final class TransportHandshaker {
 
     public static String HANDSHAKE_ACTION_NAME = "internal:tcp/handshake";
     private final ConcurrentMap<Long, HandshakeResponseHandler> pendingHandshakes = new ConcurrentHashMap<>();
@@ -148,15 +148,15 @@ final class TransportHandshaker {
         }
     }
 
-    static final class HandshakeRequest extends TransportRequest {
+    public static final class HandshakeRequest extends TransportRequest {
 
         private final Version version;
 
-        HandshakeRequest(Version version) {
+        public HandshakeRequest(Version version) {
             this.version = version;
         }
 
-        HandshakeRequest(StreamInput streamInput) throws IOException {
+        public HandshakeRequest(StreamInput streamInput) throws IOException {
             super(streamInput);
             BytesReference remainingMessage;
             try {
@@ -185,15 +185,15 @@ final class TransportHandshaker {
         }
     }
 
-    static final class HandshakeResponse extends TransportResponse {
+    public static final class HandshakeResponse extends TransportResponse {
 
         private final Version responseVersion;
 
-        HandshakeResponse(Version responseVersion) {
+        public HandshakeResponse(Version responseVersion) {
             this.responseVersion = responseVersion;
         }
 
-        private HandshakeResponse(StreamInput in) throws IOException {
+        public HandshakeResponse(StreamInput in) throws IOException {
             super(in);
             responseVersion = Version.readVersion(in);
         }
