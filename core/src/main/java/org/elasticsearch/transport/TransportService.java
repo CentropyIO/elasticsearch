@@ -73,7 +73,7 @@ import static org.elasticsearch.common.settings.Setting.listSetting;
 public class TransportService extends AbstractLifecycleComponent {
 
     public static final String DIRECT_RESPONSE_PROFILE = ".direct";
-    private static final String HANDSHAKE_ACTION_NAME = "internal:transport/handshake";
+    private String HANDSHAKE_ACTION_NAME = "internal:transport/handshake";
 
     private final CountDownLatch blockIncomingRequestsLatch = new CountDownLatch(1);
     protected final Transport transport;
@@ -137,6 +137,10 @@ public class TransportService extends AbstractLifecycleComponent {
         public void close() throws IOException {
         }
     };
+
+    public void setHandshakeActionName(String handshakeActionName) {
+        this.HANDSHAKE_ACTION_NAME = handshakeActionName;
+    }
 
     /**
      * Build the service.

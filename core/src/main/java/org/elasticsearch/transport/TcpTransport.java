@@ -180,7 +180,7 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
     private final ConcurrentMap<Long, HandshakeResponseHandler> pendingHandshakes = new ConcurrentHashMap<>();
     private final AtomicLong requestIdGenerator = new AtomicLong();
     private final CounterMetric numHandshakes = new CounterMetric();
-    private static final String HANDSHAKE_ACTION_NAME = "internal:tcp/handshake";
+    private  String HANDSHAKE_ACTION_NAME = "internal:tcp/handshake";
 
     public TcpTransport(String transportName, Settings settings, ThreadPool threadPool, BigArrays bigArrays,
                         CircuitBreakerService circuitBreakerService, NamedWriteableRegistry namedWriteableRegistry,
@@ -215,6 +215,10 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
         builder.addConnections(DiscoveryNode.isDataNode(settings) ? connectionsPerNodeRecovery : 0, TransportRequestOptions.Type.RECOVERY);
         builder.addConnections(connectionsPerNodeReg, TransportRequestOptions.Type.REG);
         return builder.build();
+    }
+
+    public void setHandshakeActionName(String handshakeActionName) {
+        this.HANDSHAKE_ACTION_NAME = handshakeActionName;
     }
 
     @Override

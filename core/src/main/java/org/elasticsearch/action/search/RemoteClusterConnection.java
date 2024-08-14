@@ -470,7 +470,7 @@ final class RemoteClusterConnection extends AbstractComponent implements Transpo
                                     try {
                                         transportService.connectToNode(node, remoteProfile); // noop if node is connected
                                         connectedNodes.add(node);
-                                    } catch (ConnectTransportException | IllegalStateException ex) {
+                                      } catch (ConnectTransportException | IllegalStateException ex) {
                                         // ISE if we fail the handshake with an version incompatible node
                                         // fair enough we can't connect just move on
                                         logger.debug((Supplier<?>)
