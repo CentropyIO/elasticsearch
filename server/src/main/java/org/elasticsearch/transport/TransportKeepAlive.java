@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * server and server channels respond. Pings are only sent at the scheduled time if the channel did not send
  * and receive a message since the last ping.
  */
-final class TransportKeepAlive implements Closeable {
+public final class TransportKeepAlive implements Closeable {
 
     static final int PING_DATA_SIZE = -1;
 
@@ -58,7 +58,7 @@ final class TransportKeepAlive implements Closeable {
     private final ThreadPool threadPool;
     private final AsyncBiFunction<TcpChannel, BytesReference, Void> pingSender;
 
-    TransportKeepAlive(ThreadPool threadPool, AsyncBiFunction<TcpChannel, BytesReference, Void> pingSender) {
+    public TransportKeepAlive(ThreadPool threadPool, AsyncBiFunction<TcpChannel, BytesReference, Void> pingSender) {
         this.threadPool = threadPool;
         this.pingSender = pingSender;
 

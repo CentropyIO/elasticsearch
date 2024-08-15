@@ -152,7 +152,7 @@ public interface Transport extends LifecycleComponent {
 
         private final String action;
 
-        ResponseContext(TransportResponseHandler<T> handler, Connection connection, String action) {
+        public ResponseContext(TransportResponseHandler<T> handler, Connection connection, String action) {
             this.handler = handler;
             this.connection = connection;
             this.action = action;
@@ -174,7 +174,7 @@ public interface Transport extends LifecycleComponent {
     /**
      * This class is a registry that allows
      */
-    final class ResponseHandlers {
+    public final class ResponseHandlers {
         private final Map<Long, ResponseContext<? extends TransportResponse>> handlers = ConcurrentCollections
             .newConcurrentMapWithAggressiveConcurrency();
         private final AtomicLong requestIdGenerator = new AtomicLong();
@@ -210,7 +210,7 @@ public interface Transport extends LifecycleComponent {
          * Returns a new request ID to use when sending a message via {@link Connection#sendRequest(long, String,
          * TransportRequest, TransportRequestOptions)}
          */
-        long newRequestId() {
+        public long newRequestId() {
             return requestIdGenerator.incrementAndGet();
         }
 

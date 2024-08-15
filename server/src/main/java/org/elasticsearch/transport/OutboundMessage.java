@@ -26,7 +26,7 @@ public abstract class OutboundMessage extends NetworkMessage {
 
     protected final Writeable message;
 
-    OutboundMessage(
+    public OutboundMessage(
         ThreadContext threadContext,
         Version version,
         byte status,
@@ -38,7 +38,7 @@ public abstract class OutboundMessage extends NetworkMessage {
         this.message = message;
     }
 
-    BytesReference serialize(BytesStreamOutput bytesStream) throws IOException {
+    public BytesReference serialize(BytesStreamOutput bytesStream) throws IOException {
         bytesStream.setVersion(version);
         bytesStream.skip(TcpHeader.headerSize(version));
 

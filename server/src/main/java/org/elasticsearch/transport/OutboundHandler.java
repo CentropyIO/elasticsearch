@@ -65,7 +65,7 @@ public class OutboundHandler {
         this.slowLogThresholdMs = slowLogThreshold.getMillis();
     }
 
-    void sendBytes(TcpChannel channel, BytesReference bytes, ActionListener<Void> listener) {
+    public void sendBytes(TcpChannel channel, BytesReference bytes, ActionListener<Void> listener) {
         internalSend(channel, bytes, null, listener);
     }
 
