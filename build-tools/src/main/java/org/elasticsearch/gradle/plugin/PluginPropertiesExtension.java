@@ -48,7 +48,7 @@ public class PluginPropertiesExtension {
     /** A license file that should be included in the built plugin zip. */
     private File licenseFile;
 
-    private boolean hasClientJar = false;
+    private boolean hasClientJar = true;
 
     /**
      * A notice file that should be included in the built plugin zip. This will be

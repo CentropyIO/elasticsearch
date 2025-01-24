@@ -55,6 +55,7 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
     private static final String INITIALIZING_SHARDS = "initializing_shards";
     private static final String UNASSIGNED_SHARDS = "unassigned_shards";
     private static final String INDICES = "indices";
+    private String level = "cluster";
 
     private static final ConstructingObjectParser<ClusterHealthResponse, Void> PARSER = new ConstructingObjectParser<>(
         "cluster_health_response",
@@ -292,6 +293,10 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
         this.clusterHealthStatus = status;
     }
 
+    public void setLevel(String level) {
+        this.level = level;
+    }
+
     public Map<String, ClusterIndexHealth> getIndices() {
         return clusterStateHealth.getIndices();
     }
@@ -357,6 +362,11 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
         builder.percentageField(ACTIVE_SHARDS_PERCENT_AS_NUMBER, ACTIVE_SHARDS_PERCENT, getActiveShardsPercent());
 
         String level = params.param("level", "cluster");
+        
+        if(!level.equals(this.level)){
+            level=this.level;
+        }
+
         boolean outputIndices = "indices".equals(level) || "shards".equals(level);
 
         if (outputIndices) {

@@ -98,6 +98,11 @@ public abstract class TransportClient extends AbstractClient {
         false,
         Setting.Property.NodeScope
     );
+    public static final Setting<Boolean> CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER = Setting.boolSetting(
+        "client.transport.disable_node_sampler",
+        false,
+        Setting.Property.NodeScope
+    );
     public static final Setting<Boolean> CLIENT_TRANSPORT_SNIFF = Setting.boolSetting(
         "client.transport.sniff",
         false,
