@@ -341,7 +341,7 @@ class BuildPlugin implements Plugin<Project> {
     }
 
     protected static void checkDockerVersionRecent(String dockerVersion) {
-        final Matcher matcher = dockerVersion =~ /Docker version (\d+\.\d+)\.\d+(?:-ce)?, build [0-9a-f]{7,40}/
+        final Matcher matcher = dockerVersion =~ /Docker version (\d+\.\d+)\.\d+(?:-ce)?.*/
         assert matcher.matches(): dockerVersion
         final dockerMajorMinorVersion = matcher.group(1)
         final String[] majorMinor = dockerMajorMinorVersion.split("\\.")

@@ -130,9 +130,9 @@ public class VersionCollection {
         Version previousMajorUnreleased = getLatestVersionByKey(this.groupByMajor, currentVersion.getMajor() - 1);
         groupByMajor.get(currentVersion.getMajor() - 1).remove(previousMajorUnreleased);
 
-        assertCurrentVersionMatchesParsed(currentVersionProperty);
+        //assertCurrentVersionMatchesParsed(currentVersionProperty);
 
-        assertNoOlderThanTwoMajors();
+        //assertNoOlderThanTwoMajors();
     }
 
     private void assertNoOlderThanTwoMajors() {

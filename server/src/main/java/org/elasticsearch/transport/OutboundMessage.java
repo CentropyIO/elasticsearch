@@ -42,19 +42,36 @@ abstract class OutboundMessage extends NetworkMessage implements Writeable {
     BytesReference serialize(BytesStreamOutput bytesStream) throws IOException {
         storedContext.restore();
         bytesStream.setVersion(version);
-        bytesStream.skip(TcpHeader.HEADER_SIZE);
+        bytesStream.skip(TcpHeader.headerSize(version));
 
         // The compressible bytes stream will not close the underlying bytes stream
         BytesReference reference;
+        int variableHeaderLength = -1;
+        final long preHeaderPosition = bytesStream.position();
+
+        if (version.onOrAfter(TcpHeader.VERSION_WITH_HEADER_SIZE)) {
+            writeVariableHeader(bytesStream);
+            variableHeaderLength = Math.toIntExact(bytesStream.position() - preHeaderPosition);
+        }
         try (CompressibleBytesOutputStream stream = new CompressibleBytesOutputStream(bytesStream, TransportStatus.isCompress(status))) {
             stream.setVersion(version);
+           if (!version.onOrAfter(TcpHeader.VERSION_WITH_HEADER_SIZE)){
             threadContext.writeTo(stream);
             writeTo(stream);
+            }
             reference = writeMessage(stream);
         }
         bytesStream.seek(0);
-        TcpHeader.writeHeader(bytesStream, requestId, status, version, reference.length() - TcpHeader.HEADER_SIZE);
+        if (version.onOrAfter(TcpHeader.VERSION_WITH_HEADER_SIZE)) {
+            TcpHeader.writeHeader(bytesStream, requestId, status, version, reference.length() - TcpHeader.headerSize(version), variableHeaderLength);
+        } else {
+        TcpHeader.writeHeader(bytesStream, requestId, status, version, reference.length() - TcpHeader.headerSize(version));
+        }
         return reference;
+    }
+    
+    protected void writeVariableHeader(StreamOutput stream) throws IOException {
+        threadContext.writeTo(stream);
     }
 
     private BytesReference writeMessage(CompressibleBytesOutputStream stream) throws IOException {
@@ -97,10 +114,21 @@ abstract class OutboundMessage extends NetworkMessage implements Writeable {
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            if (version.onOrAfter(Version.V_6_3_0)) {
+            if (!version.onOrAfter(TcpHeader.VERSION_WITH_HEADER_SIZE)) {
+                if (version.onOrAfter(Version.V_6_3_0)) {
                 out.writeStringArray(features);
             }
             out.writeString(action);
+            }
+        }
+
+        @Override
+        protected void writeVariableHeader(StreamOutput stream) throws IOException {
+            super.writeVariableHeader(stream);  // Writes ThreadContext
+            if (version.onOrAfter(Version.V_6_3_0)) {
+                stream.writeStringArray(features);
+            }
+            stream.writeString(action);
         }
 
         private static byte setStatus(boolean compress, boolean isHandshake, Writeable message) {
@@ -129,7 +157,16 @@ abstract class OutboundMessage extends NetworkMessage implements Writeable {
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            out.setFeatures(features);
+            // Only write features in main body for older versions
+            if (!version.onOrAfter(TcpHeader.VERSION_WITH_HEADER_SIZE)) {
+                out.setFeatures(features);
+            }
+        }
+
+        @Override
+        protected void writeVariableHeader(StreamOutput stream) throws IOException {
+            super.writeVariableHeader(stream);  // Writes ThreadContext
+            stream.setFeatures(features);
         }
 
         private static byte setStatus(boolean compress, boolean isHandshake, Writeable message) {

@@ -98,7 +98,11 @@ public abstract class TransportClient extends AbstractClient {
         Setting.boolSetting("client.transport.ignore_cluster_name", false, Setting.Property.NodeScope);
     public static final Setting<Boolean> CLIENT_TRANSPORT_SNIFF =
         Setting.boolSetting("client.transport.sniff", false, Setting.Property.NodeScope);
-
+    public static final Setting<Boolean> CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER = Setting.boolSetting(
+            "client.transport.disable_node_sampler",
+            false,
+            Setting.Property.NodeScope
+    );
     public static final String TRANSPORT_CLIENT_FEATURE = "transport_client";
 
     private static PluginsService newPluginService(final Settings settings, Collection<Class<? extends Plugin>> plugins) {

@@ -112,6 +112,13 @@ repositories {
   mavenCentral()
   maven {
     url "https://plugins.gradle.org/m2/"
+    //url "https://plugins.gradle.org/m2/gradle/plugin/"
+  }
+  maven {
+    url "https://plugins.gradle.org/m2/gradle/plugin/"
+  }
+  maven {
+    url "https://repo.gradle.org/gradle/libs-releases/"
   }
 }
 
@@ -121,15 +128,15 @@ dependencies {
   compile "com.carrotsearch.randomizedtesting:randomizedtesting-runner:${props.getProperty('randomizedrunner')}"
   
   compile 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
-  compile 'com.netflix.nebula:nebula-publishing-plugin:4.4.4'
-  compile 'com.netflix.nebula:gradle-info-plugin:3.0.3'
+  compile 'com.netflix.nebula:nebula-publishing-plugin:4.2.0'
+  compile 'com.netflix.nebula:gradle-info-plugin:3.1.0'
   compile 'org.eclipse.jgit:org.eclipse.jgit:3.2.0.201312181205-r'
   compile 'com.perforce:p4java:2012.3.551082' // THIS IS SUPPOSED TO BE OPTIONAL IN THE FUTURE....
   compile 'org.apache.rat:apache-rat:0.11'
   compile "org.elasticsearch:jna:5.5.0"
   compile 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
   compile 'de.thetaphi:forbiddenapis:2.6'
-  compile 'com.avast.gradle:gradle-docker-compose-plugin:0.8.12'
+  compile 'gradle.plugin.com.avast.gradle:gradle-docker-compose-plugin:0.8.12'
   testCompile "junit:junit:${props.getProperty('junit')}"
 }
 

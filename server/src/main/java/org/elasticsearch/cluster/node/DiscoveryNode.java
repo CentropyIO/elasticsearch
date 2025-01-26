@@ -33,6 +33,7 @@ import org.elasticsearch.node.Node;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -236,9 +237,25 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
             this.attributes.put(in.readString(), in.readString());
         }
         int rolesSize = in.readVInt();
-        this.roles = EnumSet.noneOf(Role.class);
-        for (int i = 0; i < rolesSize; i++) {
-            this.roles.add(in.readEnum(Role.class));
+        this.roles=EnumSet.noneOf(Role.class);
+        if (in.getVersion().onOrAfter(Version.V_7_3_0)) {
+            //We don't care about the actual roles, just need to read the correct number of roles
+            for (int i = 0; i < rolesSize; i++) {
+                final String roleName = in.readString();
+                final String roleNameAbbreviation = in.readString();
+                final boolean canContainData;
+                if (in.getVersion().onOrAfter(Version.V_7_10_0)) {
+                    canContainData = in.readBoolean();
+                } else {
+                    canContainData = roleName.equals("data");
+                }
+            }
+            //pretend it's master node
+            this.roles.add(Role.MASTER);
+        } else {
+            for (int i = 0; i < rolesSize; i++) {
+                this.roles.add(in.readEnum(Role.class));
+            }
         }
         this.version = Version.readVersion(in);
     }

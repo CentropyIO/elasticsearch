@@ -452,9 +452,16 @@ public class TransportService extends AbstractLifecycleComponent implements Tran
 
         public HandshakeResponse(StreamInput in) throws IOException {
             super(in);
-            discoveryNode = in.readOptionalWriteable(DiscoveryNode::new);
-            clusterName = new ClusterName(in);
-            version = Version.readVersion(in);
+            if(in.getVersion().onOrAfter(Version.V_7_11_0)) {
+                version = Version.readVersion(in);
+                String buildHash = in.readString();
+                discoveryNode = new DiscoveryNode(in);
+                clusterName = new ClusterName(in);
+            } else{
+                discoveryNode = in.readOptionalWriteable(DiscoveryNode::new);
+                clusterName = new ClusterName(in);
+                version = Version.readVersion(in);
+            }
         }
 
         @Override

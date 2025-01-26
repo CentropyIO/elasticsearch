@@ -176,6 +176,7 @@ public final class ClusterSettings extends AbstractScopedSettings {
                     TransportClient.CLIENT_TRANSPORT_PING_TIMEOUT,
                     TransportClient.CLIENT_TRANSPORT_IGNORE_CLUSTER_NAME,
                     TransportClient.CLIENT_TRANSPORT_SNIFF,
+                    TransportClient.CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER,
                     AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_FORCE_GROUP_SETTING,
                     BalancedShardsAllocator.INDEX_BALANCE_FACTOR_SETTING,
                     BalancedShardsAllocator.SHARD_BALANCE_FACTOR_SETTING,

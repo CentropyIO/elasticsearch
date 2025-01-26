@@ -76,6 +76,8 @@ final class TransportClientNodesService implements Closeable {
 
     private final TimeValue nodesSamplerInterval;
 
+    private final boolean disableNodeSampler;
+
     private final long pingTimeout;
 
     private final ClusterName clusterName;
@@ -97,7 +99,7 @@ final class TransportClientNodesService implements Closeable {
 
     private final AtomicInteger tempNodeIdGenerator = new AtomicInteger();
 
-    private final NodeSampler nodesSampler;
+    private NodeSampler nodesSampler;
 
     private volatile Scheduler.Cancellable nodesSamplerCancellable;
 
@@ -130,7 +132,7 @@ final class TransportClientNodesService implements Closeable {
         this.transportService = transportService;
         this.threadPool = threadPool;
         this.minCompatibilityVersion = Version.CURRENT.minimumCompatibilityVersion();
-
+        this.disableNodeSampler = TransportClient.CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER.get(settings);
         this.nodesSamplerInterval = TransportClient.CLIENT_TRANSPORT_NODES_SAMPLER_INTERVAL.get(settings);
         this.pingTimeout = TransportClient.CLIENT_TRANSPORT_PING_TIMEOUT.get(settings).millis();
         this.ignoreClusterName = TransportClient.CLIENT_TRANSPORT_IGNORE_CLUSTER_NAME.get(settings);
@@ -139,7 +141,9 @@ final class TransportClientNodesService implements Closeable {
             logger.debug("node_sampler_interval[{}]", nodesSamplerInterval);
         }
 
-        if (TransportClient.CLIENT_TRANSPORT_SNIFF.get(settings)) {
+        if (disableNodeSampler) {
+            this.nodesSampler = new NoopNodeSampler();
+        } else if (TransportClient.CLIENT_TRANSPORT_SNIFF.get(settings)) {
             this.nodesSampler = new SniffNodesSampler();
         } else {
             this.nodesSampler = new SimpleNodeSampler();
@@ -378,7 +382,7 @@ final class TransportClientNodesService implements Closeable {
                         transportService.connectToNode(node);
                     } catch (Exception e) {
                         it.remove();
-                        logger.debug(() -> new ParameterizedMessage("failed to connect to discovered node [{}]", node), e);
+                        logger.error(() -> new ParameterizedMessage("failed to connect to discovered node [{}]", node), e);
                     }
                 }
             }
@@ -401,6 +405,17 @@ final class TransportClientNodesService implements Closeable {
         }
     }
 
+    class NoopNodeSampler extends NodeSampler{
+        @Override
+        protected void doSample(){
+            HashSet<DiscoveryNode> newNodes = new HashSet<>();
+            for (DiscoveryNode listedNode : listedNodes) {
+                newNodes.add(listedNode);
+                }
+            nodes = establishNodeConnections(newNodes);
+        }
+    }
+    
     class SimpleNodeSampler extends NodeSampler {
 
         @Override
