@@ -108,6 +108,80 @@ public class IndicesOptions implements ToXContentFragment {
         public static final EnumSet<Option> NONE = EnumSet.noneOf(Option.class);
     }
 
+    private static final IndicesOptions[] OLD_VALUES;
+
+    static {
+        short max = 1 << 7;
+        OLD_VALUES = new IndicesOptions[max];
+        for (short id = 0; id < max; id++) {
+            OLD_VALUES[id] = IndicesOptions.fromByte((byte)id);
+        }
+    }
+
+    static IndicesOptions fromByte(final byte id) {
+        // IGNORE_UNAVAILABLE = 1;
+        // ALLOW_NO_INDICES = 2;
+        // EXPAND_WILDCARDS_OPEN = 4;
+        // EXPAND_WILDCARDS_CLOSED = 8;
+        // FORBID_ALIASES_TO_MULTIPLE_INDICES = 16;
+        // FORBID_CLOSED_INDICES = 32;
+        // IGNORE_ALIASES = 64;
+
+        EnumSet<Option> opts = EnumSet.noneOf(Option.class);
+        EnumSet<WildcardStates> wildcards = EnumSet.noneOf(WildcardStates.class);
+        if ((id & 1) != 0) {
+            opts.add(Option.IGNORE_UNAVAILABLE);
+        }
+        if ((id & 2) != 0) {
+            opts.add(Option.ALLOW_NO_INDICES);
+        }
+        if ((id & 4) != 0) {
+            wildcards.add(WildcardStates.OPEN);
+        }
+        if ((id & 8) != 0) {
+            wildcards.add(WildcardStates.CLOSED);
+        }
+        if ((id & 16) != 0) {
+            opts.add(Option.FORBID_ALIASES_TO_MULTIPLE_INDICES);
+        }
+        if ((id & 32) != 0) {
+            opts.add(Option.FORBID_CLOSED_INDICES);
+        }
+        if ((id & 64) != 0) {
+            opts.add(Option.IGNORE_ALIASES);
+        }
+        return new IndicesOptions(opts, wildcards);
+    }
+
+    private static byte toByte(IndicesOptions options) {
+        byte id = 0;
+        if (options.ignoreUnavailable()) {
+            id |= 1;
+        }
+        if (options.allowNoIndices()) {
+            id |= 2;
+        }
+        if (options.expandWildcardsOpen()) {
+            id |= 4;
+        }
+        if (options.expandWildcardsClosed()) {
+            id |= 8;
+        }
+        // true is default here, for bw comp we keep the first 16 values
+        // in the array same as before + the default value for the new flag
+        if (options.allowAliasesToMultipleIndices() == false) {
+            id |= 16;
+        }
+        if (options.forbidClosedIndices()) {
+            id |= 32;
+        }
+        if (options.ignoreAliases()) {
+            id |= 64;
+        }
+        return id;
+    }
+    
+
     private static final DeprecationLogger DEPRECATION_LOGGER = DeprecationLogger.getLogger(IndicesOptions.class);
     private static final String IGNORE_THROTTLED_DEPRECATION_MESSAGE = "[ignore_throttled] parameter is deprecated "
         + "because frozen indices have been deprecated. Consider cold or frozen tiers in place of frozen indices.";
@@ -258,6 +332,16 @@ public class IndicesOptions implements ToXContentFragment {
             options = EnumSet.copyOf(options);
             options.remove(Option.IGNORE_THROTTLED);
         }
+        if (out.getVersion().before(Version.V_6_4_0)) {
+            if (out.getVersion().onOrAfter(Version.V_6_0_0_alpha2)) {
+                out.write(IndicesOptions.toByte(this));
+            } else {
+                // if we are talking to a node that doesn't support the newly added flag (ignoreAliases)
+                // flip to 0 all the bits starting from the 7th
+                out.write(IndicesOptions.toByte(this) & 0x3f);
+            }
+            return;
+        }
         out.writeEnumSet(options);
         if (out.getVersion().before(Version.V_7_7_0) && expandWildcards.contains(WildcardStates.HIDDEN)) {
             final EnumSet<WildcardStates> states = EnumSet.copyOf(expandWildcards);
@@ -269,6 +353,13 @@ public class IndicesOptions implements ToXContentFragment {
     }
 
     public static IndicesOptions readIndicesOptions(StreamInput in) throws IOException {
+        if (in.getVersion().before(Version.V_6_4_0)){
+            byte id = in.readByte();
+            if (id >= OLD_VALUES.length) {
+                throw new IllegalArgumentException("No valid missing index type id: " + id);
+            }
+            return OLD_VALUES[id];
+        }
         EnumSet<Option> options = in.readEnumSet(Option.class);
         EnumSet<WildcardStates> states = in.readEnumSet(WildcardStates.class);
         if (in.getVersion().before(Version.V_7_7_0)) {
