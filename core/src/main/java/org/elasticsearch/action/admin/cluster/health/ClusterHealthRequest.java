@@ -33,6 +33,7 @@ import org.elasticsearch.common.unit.TimeValue;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.Objects;
 
 /**
  *
@@ -46,6 +47,7 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
     private ActiveShardCount waitForActiveShards = ActiveShardCount.NONE;
     private String waitForNodes = "";
     private Priority waitForEvents = null;
+    private Level level = Level.CLUSTER;
 
     public ClusterHealthRequest() {
     }
@@ -227,4 +229,19 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
             Priority.writeTo(waitForEvents, out);
         }
     }
+
+    public void level(Level level) {
+        this.level = Objects.requireNonNull(level, "level must not be null");
+    }
+
+    public Level level() {
+        return level;
+    }
+    
+    public enum Level {
+        CLUSTER,
+        INDICES,
+        SHARDS
+    }
+
 }

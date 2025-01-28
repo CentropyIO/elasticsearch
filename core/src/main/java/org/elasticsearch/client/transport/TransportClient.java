@@ -94,7 +94,12 @@ public abstract class TransportClient extends AbstractClient {
         Setting.boolSetting("client.transport.ignore_cluster_name", false, Setting.Property.NodeScope);
     public static final Setting<Boolean> CLIENT_TRANSPORT_SNIFF =
         Setting.boolSetting("client.transport.sniff", false, Setting.Property.NodeScope);
-
+    public static final Setting<Boolean> CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER = Setting.boolSetting(
+        "client.transport.disable_node_sampler",
+        false,
+        Setting.Property.NodeScope
+    );
+    
     private static PluginsService newPluginService(final Settings settings, Collection<Class<? extends Plugin>> plugins) {
         final Settings.Builder settingsBuilder = Settings.builder()
                 .put(TcpTransport.PING_SCHEDULE.getKey(), "5s") // enable by default the transport schedule ping interval
