@@ -240,13 +240,12 @@ public class DiscoveryNode implements Writeable, ToXContent {
             this.attributes.put(in.readString(), in.readString());
         }
         this.roles = EnumSet.noneOf(Role.class);
-        if(in.getVersion().onOrAfter(Version.V_5_0_0)) {
+        if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
             int rolesSize = in.readVInt();
             for (int i = 0; i < rolesSize; i++) {
                 this.roles.add(in.readEnum(Role.class));
             }
         }
-        
         this.version = Version.readVersion(in);
     }
 
