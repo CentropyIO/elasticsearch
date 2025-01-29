@@ -19,6 +19,7 @@
 
 package org.elasticsearch.transport;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Streamable;
@@ -40,11 +41,17 @@ public abstract class TransportMessage implements Streamable {
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
-
+        if (in.getVersion().before(Version.V_5_0_0_alpha1)) {
+            if(in.readBoolean()) {
+                in.readMap();
+            }
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-
+        if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            out.writeBoolean(false);
+        }
     }
 }

@@ -78,7 +78,7 @@ public class DiscoveryNode implements Writeable, ToXContent {
     private final TransportAddress address;
     private final Map<String, String> attributes;
     private final Version version;
-    private final Set<Role> roles;
+    private Set<Role> roles;
 
 
     /**
@@ -219,7 +219,11 @@ public class DiscoveryNode implements Writeable, ToXContent {
     public DiscoveryNode(StreamInput in) throws IOException {
         this.nodeName = in.readString().intern();
         this.nodeId = in.readString().intern();
-        this.ephemeralId = in.readString().intern();
+        if (in.getVersion().after(Version.V_5_0_0_alpha1)) {
+            this.ephemeralId = in.readString().intern();
+        }else {
+            this.ephemeralId = "";
+        }
         this.hostName = in.readString().intern();
         this.hostAddress = in.readString().intern();
         if (in.getVersion().after(Version.V_5_0_2)) {
@@ -235,11 +239,14 @@ public class DiscoveryNode implements Writeable, ToXContent {
         for (int i = 0; i < size; i++) {
             this.attributes.put(in.readString(), in.readString());
         }
-        int rolesSize = in.readVInt();
         this.roles = EnumSet.noneOf(Role.class);
-        for (int i = 0; i < rolesSize; i++) {
-            this.roles.add(in.readEnum(Role.class));
+        if(in.getVersion().onOrAfter(Version.V_5_0_0)) {
+            int rolesSize = in.readVInt();
+            for (int i = 0; i < rolesSize; i++) {
+                this.roles.add(in.readEnum(Role.class));
+            }
         }
+        
         this.version = Version.readVersion(in);
     }
 

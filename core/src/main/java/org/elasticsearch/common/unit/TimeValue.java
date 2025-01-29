@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.unit;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -123,14 +124,24 @@ public class TimeValue implements Writeable, Comparable<TimeValue> {
      * Read from a stream.
      */
     public TimeValue(StreamInput in) throws IOException {
-        duration = in.readZLong();
-        timeUnit = BYTE_TIME_UNIT_MAP.get(in.readByte());
+        if(in.getVersion().before(Version.V_5_0_0_alpha1)) {
+            duration = in.readLong();
+            timeUnit = TimeUnit.NANOSECONDS;
+        } else {
+            duration = in.readZLong();
+            timeUnit = BYTE_TIME_UNIT_MAP.get(in.readByte());
+        }
+
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeZLong(duration);
-        out.writeByte(TIME_UNIT_BYTE_MAP.get(timeUnit));
+        if(out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            out.writeLong(nanos());
+        } else {
+            out.writeZLong(duration);
+            out.writeByte(TIME_UNIT_BYTE_MAP.get(timeUnit));
+        }
     }
 
     public long nanos() {

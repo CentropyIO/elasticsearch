@@ -93,7 +93,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
 
     private final AtomicInteger tempNodeIdGenerator = new AtomicInteger();
 
-    private final NodeSampler nodesSampler;
+    private NodeSampler nodesSampler;
 
     private volatile ScheduledFuture nodesSamplerFuture;
 
@@ -104,6 +104,8 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     private volatile boolean closed;
 
     private final TransportClient.HostFailureListener hostFailureListener;
+
+    private final boolean disableNodeSampler;
 
     // TODO: migrate this to use low level connections and single type channels
     /** {@link ConnectionProfile} to use when to connecting to the listed nodes and doing a liveness check */
@@ -131,6 +133,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         this.nodesSamplerInterval = TransportClient.CLIENT_TRANSPORT_NODES_SAMPLER_INTERVAL.get(this.settings);
         this.pingTimeout = TransportClient.CLIENT_TRANSPORT_PING_TIMEOUT.get(this.settings).millis();
         this.ignoreClusterName = TransportClient.CLIENT_TRANSPORT_IGNORE_CLUSTER_NAME.get(this.settings);
+        this.disableNodeSampler = TransportClient.CLIENT_TRANSPORT_DISABLE_NODE_SAMPLER.get(this.settings);
 
         if (logger.isDebugEnabled()) {
             logger.debug("node_sampler_interval[{}]", nodesSamplerInterval);
@@ -428,12 +431,12 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                             nodeWithInfo.getAttributes(), nodeWithInfo.getRoles(), nodeWithInfo.getVersion()));
                     }
                 } catch (ConnectTransportException e) {
-                    logger.debug(
+                    logger.error(
                         (Supplier<?>)
                             () -> new ParameterizedMessage("failed to connect to node [{}], ignoring...", listedNode), e);
                     hostFailureListener.onNodeDisconnected(listedNode, e);
                 } catch (Exception e) {
-                    logger.info(
+                    logger.error(
                         (Supplier<?>) () -> new ParameterizedMessage("failed to get node info for {}, disconnecting...", listedNode), e);
                 }
             }

@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.admin.cluster.health;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.support.ActiveShardCount;
@@ -219,7 +220,11 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
             out.writeBoolean(true);
             out.writeByte(waitForStatus.value());
         }
-        out.writeBoolean(waitForNoRelocatingShards);
+        if(out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            out.writeInt(-1);
+        }else{
+            out.writeBoolean(waitForNoRelocatingShards);
+        }
         waitForActiveShards.writeTo(out);
         out.writeString(waitForNodes);
         if (waitForEvents == null) {

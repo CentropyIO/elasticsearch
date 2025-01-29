@@ -19,9 +19,14 @@
 
 import org.elasticsearch.gradle.precommit.PrecommitTasks
 
+plugins {
+  id("com.github.johnrengelman.shadow") version "4.0.4"
+}
+
 apply plugin: 'elasticsearch.build'
 apply plugin: 'nebula.maven-base-publish'
 apply plugin: 'nebula.maven-scm'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 group = 'org.elasticsearch.client'
 
@@ -55,4 +60,26 @@ namingConventions {
   testClass = 'com.carrotsearch.randomizedtesting.RandomizedTest'
   //we don't have integration tests
   skipIntegTestInDisguise = true
+}
+
+shadowJar {
+    // Add classifier to distinguish the fat jar
+    classifier = 'all'
+    
+    // Merge service files
+    mergeServiceFiles()
+    
+    // Exclude signing files
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude 'META-INF/*.SF'
+    
+    
+    // Merge Log4j2 configuration files
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
+}
+
+// Make the shadow jar the default artifact
+artifacts {
+    archives shadowJar
 }

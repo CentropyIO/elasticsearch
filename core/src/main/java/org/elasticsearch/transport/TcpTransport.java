@@ -270,6 +270,7 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
         @Override
         public void handleException(TransportException exp) {
             Throwable cause = exp.getCause();
+            //System.out.println("cause: " + cause.getMessage());
             if (cause != null
                 && cause instanceof ActionNotFoundTransportException
                 // this will happen if we talk to a node (pre 5.2) that doesn't have a handshake handler
@@ -471,7 +472,10 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
                 boolean success = false;
                 try {
                     nodeChannels = openConnection(node, connectionProfile);
-                    connectionValidator.accept(nodeChannels, connectionProfile);
+                    if(Version.CURRENT.onOrAfter(Version.V_5_2_0)) {
+                        // No TransportHandshake before 5.2.0
+                        connectionValidator.accept(nodeChannels, connectionProfile);
+                    }                    
                     // we acquire a connection lock, so no way there is an existing connection
                     connectedNodes.put(node, nodeChannels);
                     if (logger.isDebugEnabled()) {
@@ -544,6 +548,7 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
         }
         boolean success = false;
         NodeChannels nodeChannels = null;
+        Version version;
         connectionProfile = resolveConnectionProfile(connectionProfile, defaultConnectionProfile);
         closeLock.readLock().lock(); // ensure we don't open connections while we are closing
         try {
@@ -574,7 +579,11 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
                     connectionProfile.getConnectTimeout();
                 final TimeValue handshakeTimeout = connectionProfile.getHandshakeTimeout() == null ?
                     connectTimeout : connectionProfile.getHandshakeTimeout();
-                final Version version = executeHandshake(node, channel, handshakeTimeout);
+                if(Version.CURRENT.onOrAfter(Version.V_5_2_0)) {
+                    version = executeHandshake(node, channel, handshakeTimeout);
+                } else {
+                    version = Version.CURRENT;
+                }
                 if (version != null) {
                     // if we are talking to a pre 5.2 node we won't be able to retrieve the version since it doesn't implement the handshake
                     // we do since 5.2 - in this case we just go with the version provided by the node.
@@ -1114,7 +1123,9 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
             Version version = Version.min(getCurrentVersion(), channelVersion);
 
             stream.setVersion(version);
-            threadPool.getThreadContext().writeTo(stream);
+            if(version.onOrAfter(Version.V_5_0_0)) {
+                threadPool.getThreadContext().writeTo(stream);
+            }
             stream.writeString(action);
             BytesReference message = buildMessage(requestId, status, node.getVersion(), request, stream);
             final TransportRequestOptions finalOptions = options;
@@ -1158,7 +1169,9 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
             stream.setVersion(nodeVersion);
             RemoteTransportException tx = new RemoteTransportException(
                 nodeName(), new InetSocketTransportAddress(getLocalAddress(channel)), action, error);
-            threadPool.getThreadContext().writeTo(stream);
+                if(nodeVersion.onOrAfter(Version.V_5_0_0)) {
+                    threadPool.getThreadContext().writeTo(stream);
+                }
             stream.writeException(tx);
             byte status = 0;
             status = TransportStatus.setResponse(status);
@@ -1194,7 +1207,9 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
             if (options.compress()) {
                 status = TransportStatus.setCompress(status);
             }
-            threadPool.getThreadContext().writeTo(stream);
+            if(nodeVersion.onOrAfter(Version.V_5_0_0)) {
+                threadPool.getThreadContext().writeTo(stream);
+            }
             stream.setVersion(nodeVersion);
             BytesReference reference = buildMessage(requestId, status, nodeVersion, response, stream);
 
@@ -1391,7 +1406,9 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
             }
             streamIn = new NamedWriteableAwareStreamInput(streamIn, namedWriteableRegistry);
             streamIn.setVersion(version);
-            threadPool.getThreadContext().readHeaders(streamIn);
+            if (version.onOrAfter(Version.V_5_0_0)) {
+                threadPool.getThreadContext().readHeaders(streamIn);
+            }
             if (TransportStatus.isRequest(status)) {
                 handleRequest(channel, profileName, streamIn, requestId, messageLengthBytes, version, remoteAddress, status);
             } else {
@@ -1630,7 +1647,7 @@ public abstract class TcpTransport<Channel> extends AbstractLifecycleComponent i
                 // this is a BWC layer, if we talk to a pre 5.2 node then the handshake is not supported
                 // this will go away in master once it's all ported to 5.2 but for now we keep this to make
                 // the backport straight forward
-                return null;
+                return minCompatVersion;
             }
             if (exceptionRef.get() != null) {
                 throw new IllegalStateException("handshake failed", exceptionRef.get());
