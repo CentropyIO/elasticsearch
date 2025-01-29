@@ -41,6 +41,9 @@ public abstract class BaseRestHandler extends AbstractComponent implements RestH
     private final RestController controller;
     private final Client client;
     protected final ParseFieldMatcher parseFieldMatcher;
+    public static final String INCLUDE_TYPE_NAME_PARAMETER = "include_type_name";
+    public static final boolean DEFAULT_INCLUDE_TYPE_NAME_POLICY = true;
+    
 
     protected BaseRestHandler(Settings settings, RestController controller, Client client) {
         super(settings);

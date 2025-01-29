@@ -91,7 +91,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>rpm-maven-plugin</artifactId>
                 <configuration>
-                    <disabled>false</disabled>
+                    <disabled>true</disabled>
                     <name>elasticsearch</name>
                     <distribution>Elasticsearch</distribution>
                     <group>Application/Internet</group>

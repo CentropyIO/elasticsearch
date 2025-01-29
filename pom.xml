@@ -915,7 +915,6 @@
                                          <!-- This will automatically choose the right signatures based on 'targetVersion': -->
                                          <bundledSignature>jdk-unsafe</bundledSignature>
                                          <bundledSignature>jdk-deprecated</bundledSignature>
-                                         <bundledSignature>jdk-system-out</bundledSignature>
                                      </bundledSignatures>
                                      <signaturesFiles>
                                           <signaturesFile>${elasticsearch.tools.directory}/forbidden/core-signatures.txt</signaturesFile>
@@ -1360,7 +1359,7 @@ org.eclipse.jdt.ui.text.custom_code_templates=<?xml version\="1.0" encoding\="UT
         <profile>
             <id>release</id>
             <properties>
-                <package.rpm>true</package.rpm>
+                <package.rpm>false</package.rpm>
                 <no.commit.pattern>\bno(n|)(release|commit)\b</no.commit.pattern> <!-- check for no-commit / no-release -->
                 <forbidden.test.signatures>org.apache.lucene.util.LuceneTestCase$AwaitsFix @ Please fix all bugs before release or mark them as ignored</forbidden.test.signatures>
             </properties>

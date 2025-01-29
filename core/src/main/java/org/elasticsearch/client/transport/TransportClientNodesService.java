@@ -94,7 +94,7 @@ public class TransportClientNodesService extends AbstractComponent {
 
     private final AtomicInteger tempNodeIdGenerator = new AtomicInteger();
 
-    private final NodeSampler nodesSampler;
+    private NodeSampler nodesSampler;
 
     private volatile ScheduledFuture nodesSamplerFuture;
 
@@ -105,6 +105,8 @@ public class TransportClientNodesService extends AbstractComponent {
     private volatile boolean closed;
 
     private final TransportClient.HostFailureListener hostFailureListener;
+
+    private final boolean disableNodeSampler;
 
     @Inject
     public TransportClientNodesService(Settings settings, ClusterName clusterName, TransportService transportService,
@@ -120,12 +122,15 @@ public class TransportClientNodesService extends AbstractComponent {
         this.nodesSamplerInterval = this.settings.getAsTime("client.transport.nodes_sampler_interval", timeValueSeconds(5));
         this.pingTimeout = this.settings.getAsTime("client.transport.ping_timeout", timeValueSeconds(5)).millis();
         this.ignoreClusterName = this.settings.getAsBoolean("client.transport.ignore_cluster_name", false);
+        this.disableNodeSampler = this.settings.getAsBoolean("client.transport.disable_node_sampler", false);
 
         if (logger.isDebugEnabled()) {
             logger.debug("node_sampler_interval[" + nodesSamplerInterval + "]");
         }
 
-        if (this.settings.getAsBoolean("client.transport.sniff", false)) {
+        if (disableNodeSampler) {
+            this.nodesSampler = new NoopNodeSampler();
+        } else if (this.settings.getAsBoolean("client.transport.sniff", false)) {
             this.nodesSampler = new SniffNodesSampler();
         } else {
             this.nodesSampler = new SimpleNodeSampler();
@@ -352,7 +357,7 @@ public class TransportClientNodesService extends AbstractComponent {
                         transportService.connectToNode(node);
                     } catch (Throwable e) {
                         it.remove();
-                        logger.debug("failed to connect to discovered node [" + node + "]", e);
+                        logger.error("failed to connect to discovered node [" + node + "]", e);
                     }
                 }
             }
@@ -373,6 +378,17 @@ public class TransportClientNodesService extends AbstractComponent {
             } catch (Exception e) {
                 logger.warn("failed to sample", e);
             }
+        }
+    }
+
+    class NoopNodeSampler extends NodeSampler{
+        @Override
+        protected void doSample(){
+            HashSet<DiscoveryNode> newNodes = new HashSet<>();
+            for (DiscoveryNode listedNode : listedNodes) {
+                newNodes.add(listedNode);
+                }
+            nodes = validateNewNodes(newNodes);
         }
     }
 

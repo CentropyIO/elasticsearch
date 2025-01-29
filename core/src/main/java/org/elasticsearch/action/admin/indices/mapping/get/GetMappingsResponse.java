@@ -23,14 +23,23 @@ import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
+import org.elasticsearch.common.ParseField;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.rest.BaseRestHandler;
 
 import java.io.IOException;
+import java.util.Map;
+import static org.elasticsearch.rest.BaseRestHandler.DEFAULT_INCLUDE_TYPE_NAME_POLICY;
+import static org.elasticsearch.rest.BaseRestHandler.INCLUDE_TYPE_NAME_PARAMETER;
 
-/**
- */
-public class GetMappingsResponse extends ActionResponse {
+
+public class GetMappingsResponse extends ActionResponse implements ToXContent{
+
+    private static final ParseField MAPPINGS = new ParseField("mappings");
 
     private ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappings = ImmutableOpenMap.of();
 
@@ -79,4 +88,64 @@ public class GetMappingsResponse extends ActionResponse {
             }
         }
     }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        boolean includeTypeName = params.paramAsBoolean(BaseRestHandler.INCLUDE_TYPE_NAME_PARAMETER,
+            DEFAULT_INCLUDE_TYPE_NAME_POLICY);
+        for (final ObjectObjectCursor<String, ImmutableOpenMap<String, MappingMetaData>> indexEntry : getMappings()) {
+            builder.startObject(indexEntry.key);
+            {
+                if (includeTypeName == false) {
+                    MappingMetaData mappings = null;
+                    for (final ObjectObjectCursor<String, MappingMetaData> typeEntry : indexEntry.value) {
+                        if (typeEntry.key.equals("_default_") == false) {
+                            if (mappings != null) {
+                                throw new IllegalArgumentException("Cannot use ["+
+                                        INCLUDE_TYPE_NAME_PARAMETER +"=false] on index [" + indexEntry.key +
+                                        "] that has multiple mappings: " + indexEntry.value.keys());
+                            }
+                            mappings = typeEntry.value;
+                        }
+                    }
+                    if (mappings == null) {
+                        // no mappings yet
+                        builder.startObject(MAPPINGS.getPreferredName()).endObject();
+                    } else {
+                        builder.field(MAPPINGS.getPreferredName(), mappings.sourceAsMap());
+                    }
+                } else {
+                    builder.startObject(MAPPINGS.getPreferredName());
+                    {
+                        for (final ObjectObjectCursor<String, MappingMetaData> typeEntry : indexEntry.value) {
+                            builder.field(typeEntry.key, typeEntry.value.sourceAsMap());
+                        }
+                    }
+                    builder.endObject();
+                }
+            }
+            builder.endObject();
+        }
+        return builder;
+    }
+    @Override
+    public String toString() {
+        return Strings.toString(this, true);
+    }
+    @Override
+    public int hashCode() {
+        return mappings.hashCode();
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        GetMappingsResponse other = (GetMappingsResponse) obj;
+        return this.mappings.equals(other.mappings);
+    }
+
 }
