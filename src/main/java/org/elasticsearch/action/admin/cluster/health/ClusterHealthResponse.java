@@ -65,6 +65,12 @@ public class ClusterHealthResponse extends ActionResponse implements Iterable<Cl
     private List<String> validationFailures;
     Map<String, ClusterIndexHealth> indices = Maps.newHashMap();
 
+    private String level = "cluster";
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
+    
     ClusterHealthResponse() {
     }
 
@@ -335,6 +341,9 @@ public class ClusterHealthResponse extends ActionResponse implements Iterable<Cl
         builder.field(Fields.NUMBER_OF_IN_FLIGHT_FETCH, getNumberOfInFlightFetch());
 
         String level = params.param("level", "cluster");
+        if(!level.equals(this.level)){
+            level=this.level;
+        }
         boolean outputIndices = "indices".equals(level) || "shards".equals(level);
 
 
