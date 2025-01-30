@@ -5,6 +5,9 @@
  * in compliance with, at your election, the Elastic License 2.0 or the Server
  * Side Public License, v 1.
  */
+plugins {
+    id 'com.gradleup.shadow'
+}
 apply plugin: 'elasticsearch.build'
 apply plugin: 'elasticsearch.publish'
 
@@ -23,6 +26,14 @@ dependencies {
   testImplementation "org.hamcrest:hamcrest:${versions.hamcrest}"
 }
 
+shadowJar {
+    relocate 'org.apache.http', 'hidden.org.apache.http'
+    relocate 'org.apache.logging', 'hidden.org.apache.logging'
+    relocate 'org.apache.commons.codec', 'hidden.org.apache.commons.codec'
+    relocate 'org.apache.commons.logging', 'hidden.org.apache.commons.logging'
+}
+
+
 tasks.named("forbiddenApisTest").configure {
   // we don't use the core test-framework, no lucene classes present so we don't want the es-test-signatures to
   // be pulled in
@@ -32,3 +43,27 @@ tasks.named("forbiddenApisTest").configure {
 tasks.named('testTestingConventions').configure {
   baseClass 'com.carrotsearch.randomizedtesting.RandomizedTest'
 }
+
+shadowJar {
+    // Append 'all' to the jar name to indicate it contains all dependencies
+    archiveClassifier.set('all')
+    
+    // Merge service files
+    mergeServiceFiles()
+    
+    // Exclude signed files from dependencies to avoid security conflicts
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    exclude "**/Log4j2Plugins.dat"
+    
+    // Keep the manifest from the original JAR
+    from('META-INF/MANIFEST.MF')
+    
+    // Minimize the JAR by removing unused classes
+    minimize()
+}
+
+// Make the regular jar task depend on shadowJar
+jar.finalizedBy shadowJar
+
