@@ -180,58 +180,154 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        int size = in.readVInt();
-        if (size == 0) {
-            indices = Strings.EMPTY_ARRAY;
-        } else {
-            indices = new String[size];
-            for (int i = 0; i < indices.length; i++) {
-                indices[i] = in.readString();
+        if (in.getVersion().before(Version.V_5_0_0)) {
+            // For 2.x format
+            // First read the ActionRequest/TransportRequest parent fields
+            // Read headers for 2.x
+            if (in.getVersion().before(Version.V_5_0_0_alpha1)) {
+                if (in.readBoolean()) {
+                    // Skip headers - they'll be handled by TransportService
+                    in.readMap();
+                }
             }
-        }
-        timeout = new TimeValue(in);
-        if (in.readBoolean()) {
-            waitForStatus = ClusterHealthStatus.fromValue(in.readByte());
-        }
-        waitForNoRelocatingShards = in.readBoolean();
-        waitForActiveShards = ActiveShardCount.readFrom(in);
-        waitForNodes = in.readString();
-        if (in.readBoolean()) {
-            waitForEvents = Priority.readFrom(in);
+            
+            // Read masterNodeTimeout directly (skipping super.readFrom())
+            masterNodeTimeout = new TimeValue(in);
+            
+            // Read MasterNodeReadRequest.local value
+            local = in.readBoolean();
+            
+            // Continue with ClusterHealthRequest specific fields
+            int size = in.readVInt();
+            if (size == 0) {
+                indices = Strings.EMPTY_ARRAY;
+            } else {
+                indices = new String[size];
+                for (int i = 0; i < indices.length; i++) {
+                    indices[i] = in.readString();
+                }
+            }
+            timeout = new TimeValue(in);
+            if (in.readBoolean()) {
+                waitForStatus = ClusterHealthStatus.fromValue(in.readByte());
+            }
+            
+            // Convert waitForRelocatingShards int to waitForNoRelocatingShards boolean
+            int relocatingShards = in.readInt();
+            waitForNoRelocatingShards = (relocatingShards == 0);
+            
+            // Convert int to ActiveShardCount
+            int activeShards = in.readInt();
+            waitForActiveShards = activeShards < 0 ? 
+                ActiveShardCount.NONE : ActiveShardCount.from(activeShards);
+            
+            waitForNodes = in.readString();
+            if (in.readBoolean()) {
+                waitForEvents = Priority.readFrom(in);
+            }
+        } else {
+            // Current version format
+            super.readFrom(in);
+            int size = in.readVInt();
+            if (size == 0) {
+                indices = Strings.EMPTY_ARRAY;
+            } else {
+                indices = new String[size];
+                for (int i = 0; i < indices.length; i++) {
+                    indices[i] = in.readString();
+                }
+            }
+            timeout = new TimeValue(in);
+            if (in.readBoolean()) {
+                waitForStatus = ClusterHealthStatus.fromValue(in.readByte());
+            }
+            waitForNoRelocatingShards = in.readBoolean();
+            waitForActiveShards = ActiveShardCount.readFrom(in);
+            waitForNodes = in.readString();
+            if (in.readBoolean()) {
+                waitForEvents = Priority.readFrom(in);
+            }
         }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        super.writeTo(out);
-        if (indices == null) {
-            out.writeVInt(0);
-        } else {
-            out.writeVInt(indices.length);
-            for (String index : indices) {
-                out.writeString(index);
+        if (out.getVersion().before(Version.V_5_0_0)) {
+            // For 2.x nodes, we need to adapt the serialization format
+            // First write the ActionRequest/TransportRequest parent fields
+            // For 2.x, TransportMessage writes headers
+            if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
+                if (out.getContext() != null && out.getContext().getHeaders() != null) {
+                    out.writeBoolean(true);
+                    out.writeMap(out.getContext().getHeaders());
+                } else {
+                    out.writeBoolean(false);
+                }
             }
-        }
-        timeout.writeTo(out);
-        if (waitForStatus == null) {
-            out.writeBoolean(false);
+            
+            // Write masterNodeTimeout directly (skipping super.writeTo())
+            masterNodeTimeout.writeTo(out);
+            
+            // Write MasterNodeReadRequest.local value
+            out.writeBoolean(local);
+            
+            // Continue with ClusterHealthRequest specific fields
+            if (indices == null) {
+                out.writeVInt(0);
+            } else {
+                out.writeVInt(indices.length);
+                for (String index : indices) {
+                    out.writeString(index);
+                }
+            }
+            timeout.writeTo(out);
+            if (waitForStatus == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                out.writeByte(waitForStatus.value());
+            }
+            
+            // Convert waitForNoRelocatingShards boolean to waitForRelocatingShards int
+            out.writeInt(waitForNoRelocatingShards ? 0 : -1);
+            
+            // Convert ActiveShardCount to simple int for 2.x
+            out.writeInt(waitForActiveShards.equals(ActiveShardCount.NONE) ? -1 : waitForActiveShards.getNumberOfShards());
+            
+            out.writeString(waitForNodes);
+            if (waitForEvents == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                Priority.writeTo(waitForEvents, out);
+            }
         } else {
-            out.writeBoolean(true);
-            out.writeByte(waitForStatus.value());
-        }
-        if(out.getVersion().before(Version.V_5_0_0_alpha1)) {
-            out.writeInt(-1);
-        }else{
+            // Current version serialization
+            super.writeTo(out);
+            if (indices == null) {
+                out.writeVInt(0);
+            } else {
+                out.writeVInt(indices.length);
+                for (String index : indices) {
+                    out.writeString(index);
+                }
+            }
+            timeout.writeTo(out);
+            if (waitForStatus == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                out.writeByte(waitForStatus.value());
+            }
             out.writeBoolean(waitForNoRelocatingShards);
-        }
-        waitForActiveShards.writeTo(out);
-        out.writeString(waitForNodes);
-        if (waitForEvents == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            Priority.writeTo(waitForEvents, out);
+            waitForActiveShards.writeTo(out);
+            out.writeString(waitForNodes);
+            if (waitForEvents == null) {
+                out.writeBoolean(false);
+            } else {
+                out.writeBoolean(true);
+                Priority.writeTo(waitForEvents, out);
+            }
         }
     }
 
