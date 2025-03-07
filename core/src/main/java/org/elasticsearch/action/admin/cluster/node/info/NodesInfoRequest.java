@@ -45,7 +45,8 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
     }
 
     /**
-     * Get information from nodes based on the nodes ids specified. If none are passed, information
+     * Get information from nodes based on the nodes ids specified. If none are
+     * passed, information
      * for all nodes will be returned.
      */
     public NodesInfoRequest(String... nodesIds) {
@@ -193,6 +194,7 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
 
     /**
      * Should information about plugins be returned
+     * 
      * @param plugins true if you want info
      * @return The request
      */
@@ -210,6 +212,7 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
 
     /**
      * Should information about ingest be returned
+     * 
      * @param ingest true if you want info
      */
     public NodesInfoRequest ingest(boolean ingest) {
@@ -225,7 +228,9 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
     }
 
     /**
-     * Should information about indices (currently just indexing buffers) be returned
+     * Should information about indices (currently just indexing buffers) be
+     * returned
+     * 
      * @param indices true if you want info
      */
     public NodesInfoRequest indices(boolean indices) {
@@ -251,8 +256,10 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
         transport = in.readBoolean();
         http = in.readBoolean();
         plugins = in.readBoolean();
-        ingest = in.readBoolean();
-        indices = in.readBoolean();
+        if (out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            ingest = in.readBoolean();
+            indices = in.readBoolean();
+        }
     }
 
     @Override
@@ -266,7 +273,9 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
         out.writeBoolean(transport);
         out.writeBoolean(http);
         out.writeBoolean(plugins);
-        out.writeBoolean(ingest);
-        out.writeBoolean(indices);
+        if (out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            out.writeBoolean(ingest);
+            out.writeBoolean(indices);
+        }
     }
 }
