@@ -108,22 +108,25 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     private final boolean disableNodeSampler;
 
     // TODO: migrate this to use low level connections and single type channels
-    /** {@link ConnectionProfile} to use when to connecting to the listed nodes and doing a liveness check */
+    /**
+     * {@link ConnectionProfile} to use when to connecting to the listed nodes and
+     * doing a liveness check
+     */
     private static final ConnectionProfile LISTED_NODES_PROFILE;
 
     static {
         ConnectionProfile.Builder builder = new ConnectionProfile.Builder();
         builder.addConnections(1,
-            TransportRequestOptions.Type.BULK,
-            TransportRequestOptions.Type.PING,
-            TransportRequestOptions.Type.RECOVERY,
-            TransportRequestOptions.Type.REG,
-            TransportRequestOptions.Type.STATE);
+                TransportRequestOptions.Type.BULK,
+                TransportRequestOptions.Type.PING,
+                TransportRequestOptions.Type.RECOVERY,
+                TransportRequestOptions.Type.REG,
+                TransportRequestOptions.Type.STATE);
         LISTED_NODES_PROFILE = builder.build();
     }
 
     TransportClientNodesService(Settings settings, TransportService transportService,
-                                       ThreadPool threadPool, TransportClient.HostFailureListener hostFailureListener) {
+            ThreadPool threadPool, TransportClient.HostFailureListener hostFailureListener) {
         super(settings);
         this.clusterName = ClusterName.CLUSTER_NAME_SETTING.get(settings);
         this.transportService = transportService;
@@ -139,13 +142,16 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             logger.debug("node_sampler_interval[{}]", nodesSamplerInterval);
         }
 
-        if (TransportClient.CLIENT_TRANSPORT_SNIFF.get(this.settings)) {
+        if (disableNodeSampler) {
+            this.nodesSampler = new NoopNodeSampler();
+        } else if (TransportClient.CLIENT_TRANSPORT_SNIFF.get(settings)) {
             this.nodesSampler = new SniffNodesSampler();
         } else {
             this.nodesSampler = new SimpleNodeSampler();
         }
         this.hostFailureListener = hostFailureListener;
-        this.nodesSamplerFuture = threadPool.schedule(nodesSamplerInterval, ThreadPool.Names.GENERIC, new ScheduledNodeSampler());
+        this.nodesSamplerFuture = threadPool.schedule(nodesSamplerInterval, ThreadPool.Names.GENERIC,
+                new ScheduledNodeSampler());
     }
 
     public List<TransportAddress> transportAddresses() {
@@ -247,13 +253,15 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         }
         ensureNodesAreAvailable(nodes);
         int index = getNodeNumber();
-        RetryListener<Response> retryListener = new RetryListener<>(callback, listener, nodes, index, hostFailureListener);
+        RetryListener<Response> retryListener = new RetryListener<>(callback, listener, nodes, index,
+                hostFailureListener);
         DiscoveryNode node = retryListener.getNode(0);
         try {
             callback.doWithNode(node, retryListener);
         } catch (Exception e) {
             try {
-                //this exception can't come from the TransportService as it doesn't throw exception at all
+                // this exception can't come from the TransportService as it doesn't throw
+                // exception at all
                 listener.onFailure(e);
             } finally {
                 retryListener.maybeNodeFailed(node, e);
@@ -271,7 +279,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         private volatile int i;
 
         RetryListener(NodeListenerCallback<Response> callback, ActionListener<Response> listener,
-                             List<DiscoveryNode> nodes, int index, TransportClient.HostFailureListener hostFailureListener) {
+                List<DiscoveryNode> nodes, int index, TransportClient.HostFailureListener hostFailureListener) {
             this.callback = callback;
             this.listener = listener;
             this.nodes = nodes;
@@ -291,13 +299,15 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                 maybeNodeFailed(getNode(this.i), (ConnectTransportException) throwable);
                 int i = ++this.i;
                 if (i >= nodes.size()) {
-                    listener.onFailure(new NoNodeAvailableException("None of the configured nodes were available: " + nodes, e));
+                    listener.onFailure(
+                            new NoNodeAvailableException("None of the configured nodes were available: " + nodes, e));
                 } else {
                     try {
                         callback.doWithNode(getNode(i), this);
-                    } catch(final Exception inner) {
+                    } catch (final Exception inner) {
                         inner.addSuppressed(e);
-                        // this exception can't come from the TransportService as it doesn't throw exceptions at all
+                        // this exception can't come from the TransportService as it doesn't throw
+                        // exceptions at all
                         listener.onFailure(inner);
                     }
                 }
@@ -346,7 +356,8 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
 
     private void ensureNodesAreAvailable(List<DiscoveryNode> nodes) {
         if (nodes.isEmpty()) {
-            String message = String.format(Locale.ROOT, "None of the configured nodes are available: %s", this.listedNodes);
+            String message = String.format(Locale.ROOT, "None of the configured nodes are available: %s",
+                    this.listedNodes);
             throw new NoNodeAvailableException(message);
         }
     }
@@ -364,11 +375,12 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         protected abstract void doSample();
 
         /**
-         * validates a set of potentially newly discovered nodes and returns an immutable
+         * validates a set of potentially newly discovered nodes and returns an
+         * immutable
          * list of the nodes that has passed.
          */
         protected List<DiscoveryNode> validateNewNodes(Set<DiscoveryNode> nodes) {
-            for (Iterator<DiscoveryNode> it = nodes.iterator(); it.hasNext(); ) {
+            for (Iterator<DiscoveryNode> it = nodes.iterator(); it.hasNext();) {
                 DiscoveryNode node = it.next();
                 if (!transportService.nodeConnected(node)) {
                     try {
@@ -376,7 +388,8 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                         transportService.connectToNode(node);
                     } catch (Exception e) {
                         it.remove();
-                        logger.error((Supplier<?>) () -> new ParameterizedMessage("failed to connect to discovered node [{}]", node), e);
+                        logger.error((Supplier<?>) () -> new ParameterizedMessage(
+                                "failed to connect to discovered node [{}]", node), e);
                     }
                 }
             }
@@ -400,6 +413,17 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         }
     }
 
+    class NoopNodeSampler extends NodeSampler {
+        @Override
+        protected void doSample() {
+            HashSet<DiscoveryNode> newNodes = new HashSet<>();
+            for (DiscoveryNode listedNode : listedNodes) {
+                newNodes.add(listedNode);
+            }
+            nodes = validateNewNodes(newNodes);
+        }
+    }
+
     class SimpleNodeSampler extends NodeSampler {
 
         @Override
@@ -407,17 +431,19 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             HashSet<DiscoveryNode> newNodes = new HashSet<>();
             HashSet<DiscoveryNode> newFilteredNodes = new HashSet<>();
             for (DiscoveryNode listedNode : listedNodes) {
-                try (Transport.Connection connection = transportService.openConnection(listedNode, LISTED_NODES_PROFILE)){
+                try (Transport.Connection connection = transportService.openConnection(listedNode,
+                        LISTED_NODES_PROFILE)) {
                     final PlainTransportFuture<LivenessResponse> handler = new PlainTransportFuture<>(
-                        new FutureTransportResponseHandler<LivenessResponse>() {
-                            @Override
-                            public LivenessResponse newInstance() {
-                                return new LivenessResponse();
-                            }
-                        });
+                            new FutureTransportResponseHandler<LivenessResponse>() {
+                                @Override
+                                public LivenessResponse newInstance() {
+                                    return new LivenessResponse();
+                                }
+                            });
                     transportService.sendRequest(connection, TransportLivenessAction.NAME, new LivenessRequest(),
-                        TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE).withTimeout(pingTimeout).build(),
-                        handler);
+                            TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE)
+                                    .withTimeout(pingTimeout).build(),
+                            handler);
                     final LivenessResponse livenessResponse = handler.txGet();
                     if (!ignoreClusterName && !clusterName.equals(livenessResponse.getClusterName())) {
                         logger.warn("node {} not part of the cluster {}, ignoring...", listedNode, clusterName);
@@ -426,18 +452,22 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                         // use discovered information but do keep the original transport address,
                         // so people can control which address is exactly used.
                         DiscoveryNode nodeWithInfo = livenessResponse.getDiscoveryNode();
-                        newNodes.add(new DiscoveryNode(nodeWithInfo.getName(), nodeWithInfo.getId(), nodeWithInfo.getEphemeralId(),
-                            nodeWithInfo.getHostName(), nodeWithInfo.getHostAddress(), listedNode.getAddress(),
-                            nodeWithInfo.getAttributes(), nodeWithInfo.getRoles(), nodeWithInfo.getVersion()));
+                        newNodes.add(new DiscoveryNode(nodeWithInfo.getName(), nodeWithInfo.getId(),
+                                nodeWithInfo.getEphemeralId(),
+                                nodeWithInfo.getHostName(), nodeWithInfo.getHostAddress(), listedNode.getAddress(),
+                                nodeWithInfo.getAttributes(), nodeWithInfo.getRoles(), nodeWithInfo.getVersion()));
                     }
                 } catch (ConnectTransportException e) {
                     logger.error(
-                        (Supplier<?>)
-                            () -> new ParameterizedMessage("failed to connect to node [{}], ignoring...", listedNode), e);
+                            (Supplier<?>) () -> new ParameterizedMessage("failed to connect to node [{}], ignoring...",
+                                    listedNode),
+                            e);
                     hostFailureListener.onNodeDisconnected(listedNode, e);
                 } catch (Exception e) {
                     logger.error(
-                        (Supplier<?>) () -> new ParameterizedMessage("failed to get node info for {}, disconnecting...", listedNode), e);
+                            (Supplier<?>) () -> new ParameterizedMessage(
+                                    "failed to get node info for {}, disconnecting...", listedNode),
+                            e);
                 }
             }
 
@@ -461,13 +491,15 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             }
 
             final CountDownLatch latch = new CountDownLatch(nodesToPing.size());
-            final ConcurrentMap<DiscoveryNode, ClusterStateResponse> clusterStateResponses = ConcurrentCollections.newConcurrentMap();
+            final ConcurrentMap<DiscoveryNode, ClusterStateResponse> clusterStateResponses = ConcurrentCollections
+                    .newConcurrentMap();
             try {
                 for (final DiscoveryNode nodeToPing : nodesToPing) {
                     threadPool.executor(ThreadPool.Names.MANAGEMENT).execute(new AbstractRunnable() {
 
                         /**
-                         * we try to reuse existing connections but if needed we will open a temporary connection
+                         * we try to reuse existing connections but if needed we will open a temporary
+                         * connection
                          * that will be closed at the end of the execution.
                          */
                         Transport.Connection connectionToClose = null;
@@ -484,13 +516,15 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                         public void onFailure(Exception e) {
                             onDone();
                             if (e instanceof ConnectTransportException) {
-                                logger.debug((Supplier<?>)
-                                    () -> new ParameterizedMessage("failed to connect to node [{}], ignoring...", nodeToPing), e);
+                                logger.debug((Supplier<?>) () -> new ParameterizedMessage(
+                                        "failed to connect to node [{}], ignoring...", nodeToPing), e);
                                 hostFailureListener.onNodeDisconnected(nodeToPing, e);
                             } else {
                                 logger.info(
-                                    (Supplier<?>) () -> new ParameterizedMessage(
-                                        "failed to get local cluster state info for {}, disconnecting...", nodeToPing), e);
+                                        (Supplier<?>) () -> new ParameterizedMessage(
+                                                "failed to get local cluster state info for {}, disconnecting...",
+                                                nodeToPing),
+                                        e);
                             }
                         }
 
@@ -510,39 +544,41 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                                 pingConnection = connectionToClose;
                             }
                             transportService.sendRequest(pingConnection, ClusterStateAction.NAME,
-                                Requests.clusterStateRequest().clear().nodes(true).local(true),
-                                TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE)
-                                    .withTimeout(pingTimeout).build(),
-                                new TransportResponseHandler<ClusterStateResponse>() {
+                                    Requests.clusterStateRequest().clear().nodes(true).local(true),
+                                    TransportRequestOptions.builder().withType(TransportRequestOptions.Type.STATE)
+                                            .withTimeout(pingTimeout).build(),
+                                    new TransportResponseHandler<ClusterStateResponse>() {
 
-                                    @Override
-                                    public ClusterStateResponse newInstance() {
-                                        return new ClusterStateResponse();
-                                    }
+                                        @Override
+                                        public ClusterStateResponse newInstance() {
+                                            return new ClusterStateResponse();
+                                        }
 
-                                    @Override
-                                    public String executor() {
-                                        return ThreadPool.Names.SAME;
-                                    }
+                                        @Override
+                                        public String executor() {
+                                            return ThreadPool.Names.SAME;
+                                        }
 
-                                    @Override
-                                    public void handleResponse(ClusterStateResponse response) {
-                                        clusterStateResponses.put(nodeToPing, response);
-                                        onDone();
-                                    }
-
-                                    @Override
-                                    public void handleException(TransportException e) {
-                                        logger.info(
-                                            (Supplier<?>) () -> new ParameterizedMessage(
-                                                "failed to get local cluster state for {}, disconnecting...", nodeToPing), e);
-                                        try {
-                                            hostFailureListener.onNodeDisconnected(nodeToPing, e);
-                                        } finally {
+                                        @Override
+                                        public void handleResponse(ClusterStateResponse response) {
+                                            clusterStateResponses.put(nodeToPing, response);
                                             onDone();
                                         }
-                                    }
-                                });
+
+                                        @Override
+                                        public void handleException(TransportException e) {
+                                            logger.info(
+                                                    (Supplier<?>) () -> new ParameterizedMessage(
+                                                            "failed to get local cluster state for {}, disconnecting...",
+                                                            nodeToPing),
+                                                    e);
+                                            try {
+                                                hostFailureListener.onNodeDisconnected(nodeToPing, e);
+                                            } finally {
+                                                onDone();
+                                            }
+                                        }
+                                    });
                         }
                     });
                 }
