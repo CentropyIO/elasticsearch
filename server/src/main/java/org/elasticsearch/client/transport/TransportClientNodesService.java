@@ -384,6 +384,7 @@ final class TransportClientNodesService implements Closeable {
                     } catch (Exception e) {
                         it.remove();
                         logger.error(() -> new ParameterizedMessage("failed to connect to discovered node [{}]", node), e);
+                        throw e;
                     }
                 }
             }
