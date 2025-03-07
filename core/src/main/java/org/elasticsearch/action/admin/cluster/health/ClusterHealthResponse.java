@@ -31,10 +31,12 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.StatusToXContentObject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashMap;
 
 public class ClusterHealthResponse extends ActionResponse implements StatusToXContentObject {
     private String clusterName;
@@ -178,26 +180,122 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         clusterName = in.readString();
-        clusterHealthStatus = ClusterHealthStatus.fromValue(in.readByte());
-        clusterStateHealth = new ClusterStateHealth(in);
-        numberOfPendingTasks = in.readInt();
-        timedOut = in.readBoolean();
-        numberOfInFlightFetch = in.readInt();
-        delayedUnassignedShards= in.readInt();
-        taskMaxWaitingTime = new TimeValue(in);
+        
+        if (in.getVersion().before(Version.V_5_0_0)) {
+            // For 2.x format
+            // First read the old format
+            int activePrimaryShards = in.readVInt();
+            int activeShards = in.readVInt();
+            int relocatingShards = in.readVInt();
+            int initializingShards = in.readVInt();
+            int unassignedShards = in.readVInt();
+            int numberOfNodes = in.readVInt();
+            int numberOfDataNodes = in.readVInt();
+            numberOfPendingTasks = in.readInt();
+            
+            // Here's the critical part - read the status byte from 2.x which comes next
+            ClusterHealthStatus status = ClusterHealthStatus.fromValue(in.readByte());
+            // Set the cluster health status
+            clusterHealthStatus = status;
+            
+            // Read indices (skip for compatibility)
+            int size = in.readVInt();
+            Map<String, ClusterIndexHealth> indices = new HashMap<>();
+            for (int i = 0; i < size; i++) {
+                ClusterIndexHealth indexHealth = ClusterIndexHealth.readClusterIndexHealth(in);
+                indices.put(indexHealth.getIndex(), indexHealth);
+            }
+            
+            timedOut = in.readBoolean();
+            
+            // Skip validation failures
+            size = in.readVInt();
+            if (size > 0) {
+                for (int i = 0; i < size; i++) {
+                    in.readString();
+                }
+            }
+            
+            numberOfInFlightFetch = in.readInt();
+            
+            // Read delayedUnassignedShards if version is 1.7.0+
+            if (in.getVersion().onOrAfter(Version.V_1_7_0)) {
+                delayedUnassignedShards = in.readInt();
+            }
+            
+            // Read active shards percentage
+            double activeShardsPercent = in.readDouble();
+            
+            // Read task max waiting time
+            taskMaxWaitingTime = new TimeValue(in);
+            
+            // Create ClusterStateHealth from the values we read
+            clusterStateHealth = new ClusterStateHealth(
+                numberOfNodes, numberOfDataNodes, activeShards, relocatingShards, 
+                activePrimaryShards, initializingShards, unassignedShards, 
+                activeShardsPercent, indices
+            );
+        } else {
+            // Current version format
+            clusterHealthStatus = ClusterHealthStatus.fromValue(in.readByte());
+            clusterStateHealth = new ClusterStateHealth(in);
+            numberOfPendingTasks = in.readInt();
+            timedOut = in.readBoolean();
+            numberOfInFlightFetch = in.readInt();
+            delayedUnassignedShards = in.readInt();
+            taskMaxWaitingTime = new TimeValue(in);
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(clusterName);
-        out.writeByte(clusterHealthStatus.value());
-        clusterStateHealth.writeTo(out);
-        out.writeInt(numberOfPendingTasks);
-        out.writeBoolean(timedOut);
-        out.writeInt(numberOfInFlightFetch);
-        out.writeInt(delayedUnassignedShards);
-        taskMaxWaitingTime.writeTo(out);
+        
+        if (out.getVersion().before(Version.V_5_0_0)) {
+            // For 2.x format, we need to write all the fields in the order expected by 2.x nodes
+            out.writeVInt(clusterStateHealth.getActivePrimaryShards());
+            out.writeVInt(clusterStateHealth.getActiveShards());
+            out.writeVInt(clusterStateHealth.getRelocatingShards());
+            out.writeVInt(clusterStateHealth.getInitializingShards());
+            out.writeVInt(clusterStateHealth.getUnassignedShards());
+            out.writeVInt(clusterStateHealth.getNumberOfNodes());
+            out.writeVInt(clusterStateHealth.getNumberOfDataNodes());
+            out.writeInt(numberOfPendingTasks);
+            out.writeByte(clusterHealthStatus.value());
+            
+            // Write indices
+            Map<String, ClusterIndexHealth> indices = clusterStateHealth.getIndices();
+            out.writeVInt(indices.size());
+            for (ClusterIndexHealth indexHealth : indices.values()) {
+                indexHealth.writeTo(out);
+            }
+            
+            out.writeBoolean(timedOut);
+            
+            // Write empty validation failures
+            out.writeVInt(0);
+            
+            out.writeInt(numberOfInFlightFetch);
+            
+            // Always write delayedUnassignedShards
+            out.writeInt(delayedUnassignedShards);
+            
+            // Write active shards percent
+            out.writeDouble(clusterStateHealth.getActiveShardsPercent());
+            
+            // Write task max waiting time
+            taskMaxWaitingTime.writeTo(out);
+        } else {
+            // Current version format
+            out.writeByte(clusterHealthStatus.value());
+            clusterStateHealth.writeTo(out);
+            out.writeInt(numberOfPendingTasks);
+            out.writeBoolean(timedOut);
+            out.writeInt(numberOfInFlightFetch);
+            out.writeInt(delayedUnassignedShards);
+            taskMaxWaitingTime.writeTo(out);
+        }
     }
 
     @Override
