@@ -252,18 +252,12 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        if (out.getVersion().before(Version.V_5_0_0)) {
+        if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
             // For 2.x nodes, we need to adapt the serialization format
             // First write the ActionRequest/TransportRequest parent fields
             // For 2.x, TransportMessage writes headers
-            if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
-                if (out.getContext() != null && out.getContext().getHeaders() != null) {
-                    out.writeBoolean(true);
-                    out.writeMap(out.getContext().getHeaders());
-                } else {
-                    out.writeBoolean(false);
-                }
-            }
+            out.writeBoolean(false);
+
             
             // Write masterNodeTimeout directly (skipping super.writeTo())
             masterNodeTimeout.writeTo(out);
@@ -292,7 +286,7 @@ public class ClusterHealthRequest extends MasterNodeReadRequest<ClusterHealthReq
             out.writeInt(waitForNoRelocatingShards ? 0 : -1);
             
             // Convert ActiveShardCount to simple int for 2.x
-            out.writeInt(waitForActiveShards.equals(ActiveShardCount.NONE) ? -1 : waitForActiveShards.getNumberOfShards());
+            out.writeInt(-1);
             
             out.writeString(waitForNodes);
             if (waitForEvents == null) {

@@ -26,6 +26,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -45,7 +46,7 @@ public final class ClusterStateHealth implements Iterable<ClusterIndexHealth>, W
     private final int unassignedShards;
     private final double activeShardsPercent;
     private final ClusterHealthStatus status;
-    private final Map<String, ClusterIndexHealth> indices = new HashMap<>();
+    private Map<String, ClusterIndexHealth> indices = new HashMap<>();
 
     /**
      * Creates a new <code>ClusterStateHealth</code> instance considering the current cluster state and all indices in the cluster.
@@ -55,6 +56,25 @@ public final class ClusterStateHealth implements Iterable<ClusterIndexHealth>, W
     public ClusterStateHealth(final ClusterState clusterState) {
         this(clusterState, clusterState.metaData().getConcreteAllIndices());
     }
+
+    /**
+     * Full constructor which is only intended to provide wire-compatibility for 2.x.
+     */
+    public ClusterStateHealth(int numberOfNodes, int numberOfDataNodes, int activeShards, int relocatingShards, int activePrimaryShards,
+                              int initializingShards, int unassignedShards, double activeShardsPercent, ClusterHealthStatus status,
+                              Map<String, ClusterIndexHealth> indices) {
+        this.numberOfNodes = numberOfNodes;
+        this.numberOfDataNodes = numberOfDataNodes;
+        this.activeShards = activeShards;
+        this.relocatingShards = relocatingShards;
+        this.activePrimaryShards = activePrimaryShards;
+        this.initializingShards = initializingShards;
+        this.unassignedShards = unassignedShards;
+        this.activeShardsPercent = activeShardsPercent;
+        this.status = status;
+        this.indices = indices;
+    }
+
 
     /**
      * Creates a new <code>ClusterStateHealth</code> instance considering the current cluster state and the provided index names.

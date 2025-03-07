@@ -181,7 +181,7 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
         super.readFrom(in);
         clusterName = in.readString();
         
-        if (in.getVersion().before(Version.V_5_0_0)) {
+        if (in.getVersion().before(Version.V_5_0_0_alpha1)) {
             // For 2.x format
             // First read the old format
             int activePrimaryShards = in.readVInt();
@@ -202,7 +202,7 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
             int size = in.readVInt();
             Map<String, ClusterIndexHealth> indices = new HashMap<>();
             for (int i = 0; i < size; i++) {
-                ClusterIndexHealth indexHealth = ClusterIndexHealth.readClusterIndexHealth(in);
+                ClusterIndexHealth indexHealth = new ClusterIndexHealth(in);
                 indices.put(indexHealth.getIndex(), indexHealth);
             }
             
@@ -217,11 +217,8 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
             }
             
             numberOfInFlightFetch = in.readInt();
-            
-            // Read delayedUnassignedShards if version is 1.7.0+
-            if (in.getVersion().onOrAfter(Version.V_1_7_0)) {
-                delayedUnassignedShards = in.readInt();
-            }
+            //Assume version is always >= 1.7.0
+            delayedUnassignedShards = in.readInt();
             
             // Read active shards percentage
             double activeShardsPercent = in.readDouble();
@@ -233,7 +230,7 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
             clusterStateHealth = new ClusterStateHealth(
                 numberOfNodes, numberOfDataNodes, activeShards, relocatingShards, 
                 activePrimaryShards, initializingShards, unassignedShards, 
-                activeShardsPercent, indices
+                activeShardsPercent, status, indices
             );
         } else {
             // Current version format
@@ -252,7 +249,7 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
         super.writeTo(out);
         out.writeString(clusterName);
         
-        if (out.getVersion().before(Version.V_5_0_0)) {
+        if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
             // For 2.x format, we need to write all the fields in the order expected by 2.x nodes
             out.writeVInt(clusterStateHealth.getActivePrimaryShards());
             out.writeVInt(clusterStateHealth.getActiveShards());
