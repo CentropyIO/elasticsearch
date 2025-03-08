@@ -24,6 +24,7 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 
@@ -48,10 +49,20 @@ public class OsInfo implements Writeable, ToXContent {
     public OsInfo(StreamInput in) throws IOException {
         this.refreshInterval = in.readLong();
         this.availableProcessors = in.readInt();
-        this.allocatedProcessors = in.readInt();
-        this.name = in.readOptionalString();
-        this.arch = in.readOptionalString();
-        this.version = in.readOptionalString();
+        if (in.getVersion().onOrAfter(Version.V_2_1_0)) {
+            this.allocatedProcessors = in.readInt();
+        }else{
+            this.allocatedProcessors = 0;
+        }
+        if (in.getVersion().onOrAfter(Version.V_2_2_0)) {
+            this.name = in.readOptionalString();
+            this.arch = in.readOptionalString();
+            this.version = in.readOptionalString();
+        } else {
+            this.name = null;
+            this.arch = null;
+            this.version = null;
+        }
     }
 
     @Override

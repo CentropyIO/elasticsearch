@@ -29,6 +29,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.util.List;
@@ -53,6 +54,9 @@ public class NodesInfoResponse extends BaseNodesResponse<NodeInfo> implements To
 
     @Override
     protected void writeNodesTo(StreamOutput out, List<NodeInfo> nodes) throws IOException {
+        if(out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            super.writeTo(out);
+        }
         out.writeStreamableList(nodes);
     }
 

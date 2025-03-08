@@ -79,12 +79,22 @@ public class PluginInfo implements Writeable, ToXContent {
     public PluginInfo(final StreamInput in) throws IOException {
         this.name = in.readString();
         this.description = in.readString();
-        this.version = in.readString();
-        this.classname = in.readString();
-        if (in.getVersion().onOrAfter(Version.V_5_4_0)) {
-            hasNativeController = in.readBoolean();
+        if (in.getVersion().before(Version.V_5_0_0_alpha1)) {
+            // Read and ignore the fields from older versions that are no longer used
+            boolean site = in.readBoolean();
+            boolean jvm = in.readBoolean();
+            this.version = in.readString();
+            this.classname = in.readString();
+            boolean isolated = in.readBoolean();
+            this.hasNativeController = false;
         } else {
-            hasNativeController = false;
+            this.version = in.readString();
+            this.classname = in.readString();
+            if (in.getVersion().onOrAfter(Version.V_5_4_0)) {
+                hasNativeController = in.readBoolean();
+            } else {
+                hasNativeController = false;
+            }
         }
     }
 
@@ -92,10 +102,19 @@ public class PluginInfo implements Writeable, ToXContent {
     public void writeTo(final StreamOutput out) throws IOException {
         out.writeString(name);
         out.writeString(description);
-        out.writeString(version);
-        out.writeString(classname);
-        if (out.getVersion().onOrAfter(Version.V_5_4_0)) {
-            out.writeBoolean(hasNativeController);
+        if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            // Write site, jvm, and isolated as false for older versions
+            out.writeBoolean(false); // site
+            out.writeBoolean(false); // jvm
+            out.writeString(version);
+            out.writeString(classname);
+            out.writeBoolean(false); // isolated
+        } else {
+            out.writeString(version);
+            out.writeString(classname);
+            if (out.getVersion().onOrAfter(Version.V_5_4_0)) {
+                out.writeBoolean(hasNativeController);
+            }
         }
     }
 

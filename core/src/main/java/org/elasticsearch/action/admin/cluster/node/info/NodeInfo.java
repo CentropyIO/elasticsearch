@@ -193,10 +193,20 @@ public class NodeInfo extends BaseNodeResponse {
         super.readFrom(in);
         version = Version.readVersion(in);
         build = Build.readBuild(in);
-        if (in.readBoolean()) {
-            totalIndexingBuffer = new ByteSizeValue(in.readLong());
-        } else {
-            totalIndexingBuffer = null;
+        if(version.onOrAfter(Version.V_5_0_0_alpha1)) {
+            if (in.readBoolean()) {
+                totalIndexingBuffer = new ByteSizeValue(in.readLong());
+            } else {
+                totalIndexingBuffer = null;
+            }
+        }else{
+            if(in.readBoolean()){
+            int size = in.readVInt();
+            for (int i = 0; i < size; i++) {
+                in.readString();
+                    in.readString();
+                }
+            }
         }
         if (in.readBoolean()) {
             settings = Settings.readSettingsFromStream(in);
@@ -208,7 +218,9 @@ public class NodeInfo extends BaseNodeResponse {
         transport = in.readOptionalWriteable(TransportInfo::new);
         http = in.readOptionalWriteable(HttpInfo::new);
         plugins = in.readOptionalWriteable(PluginsAndModules::new);
-        ingest = in.readOptionalWriteable(IngestInfo::new);
+        if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            ingest = in.readOptionalWriteable(IngestInfo::new);
+        }
     }
 
     @Override
@@ -235,6 +247,8 @@ public class NodeInfo extends BaseNodeResponse {
         out.writeOptionalWriteable(transport);
         out.writeOptionalWriteable(http);
         out.writeOptionalWriteable(plugins);
-        out.writeOptionalWriteable(ingest);
+        if(out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            out.writeOptionalWriteable(ingest);
+        }
     }
 }

@@ -22,6 +22,7 @@ package org.elasticsearch.action.admin.cluster.node.info;
 import org.elasticsearch.action.support.nodes.BaseNodesRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 
@@ -256,7 +257,7 @@ public class NodesInfoRequest extends BaseNodesRequest<NodesInfoRequest> {
         transport = in.readBoolean();
         http = in.readBoolean();
         plugins = in.readBoolean();
-        if (out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+        if (in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
             ingest = in.readBoolean();
             indices = in.readBoolean();
         }

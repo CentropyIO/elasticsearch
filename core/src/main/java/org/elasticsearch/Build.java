@@ -116,9 +116,15 @@ public class Build {
 
     public static Build readBuild(StreamInput in) throws IOException {
         String hash = in.readString();
-        String date = in.readString();
-        boolean snapshot = in.readBoolean();
-        return new Build(hash, date, snapshot);
+        if (in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            String date = in.readString();
+            boolean snapshot = in.readBoolean();
+            return new Build(hash, date, snapshot);
+        } else {
+            in.readString();
+            in.readString();
+            return new Build(hash, "Unknown", true);
+        }
     }
 
     public static void writeBuild(Build build, StreamOutput out) throws IOException {

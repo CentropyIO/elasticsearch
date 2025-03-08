@@ -42,6 +42,7 @@ import org.elasticsearch.common.util.concurrent.XRejectedExecutionHandler;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.node.Node;
+import org.elasticsearch.Version;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -110,8 +111,10 @@ public class ThreadPool extends AbstractComponent implements Closeable {
         public static ThreadPoolType fromType(String type) {
             ThreadPoolType threadPoolType = TYPE_MAP.get(type);
             if (threadPoolType == null) {
-                throw new IllegalArgumentException("no ThreadPoolType for " + type);
+                //throw new IllegalArgumentException("no ThreadPoolType for " + type);
+                return ThreadPoolType.DIRECT;
             }
+
             return threadPoolType;
         }
     }
@@ -603,6 +606,11 @@ public class ThreadPool extends AbstractComponent implements Closeable {
             max = in.readInt();
             keepAlive = in.readOptionalWriteable(TimeValue::new);
             queueSize = in.readOptionalWriteable(SizeValue::new);
+            if(in.getVersion().before(Version.V_5_0_0_alpha1)){
+                in.readBoolean(); // here to conform with removed waitTime
+                in.readBoolean(); // here to conform with removed rejected setting
+                in.readBoolean(); // here to conform with queue type
+            }
         }
 
         @Override
@@ -613,6 +621,11 @@ public class ThreadPool extends AbstractComponent implements Closeable {
             out.writeInt(max);
             out.writeOptionalWriteable(keepAlive);
             out.writeOptionalWriteable(queueSize);
+            if(out.getVersion().before(Version.V_5_0_0_alpha1)){
+                out.writeBoolean(false); // here to conform with removed waitTime
+                out.writeBoolean(false); // here to conform with removed rejected setting
+                out.writeBoolean(false); // here to conform with queue type
+            }
         }
 
         public String getName() {

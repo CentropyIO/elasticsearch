@@ -25,6 +25,7 @@ import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
@@ -38,6 +39,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 public class JvmInfo implements Writeable, ToXContent {
 
@@ -235,11 +237,23 @@ public class JvmInfo implements Writeable, ToXContent {
         }
         bootClassPath = in.readString();
         classPath = in.readString();
-        systemProperties = in.readMap(StreamInput::readString, StreamInput::readString);
+        if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            systemProperties = in.readMap(StreamInput::readString, StreamInput::readString);
+        } else {
+            int size = in.readInt();
+            systemProperties = new HashMap<>();
+            for (int i = 0; i < size; i++) {
+                systemProperties.put(in.readString(), in.readString());
+            }
+        }
         mem = new Mem(in);
         gcCollectors = in.readStringArray();
         memoryPools = in.readStringArray();
-        useCompressedOops = in.readString();
+        if (in.getVersion().onOrAfter(Version.V_2_2_0)) {
+            useCompressedOops = in.readString();
+        } else {
+            useCompressedOops = null;
+        }
         //the following members are only used locally for bootstrap checks, never serialized nor printed out
         this.configuredMaxHeapSize = -1;
         this.configuredInitialHeapSize = -1;

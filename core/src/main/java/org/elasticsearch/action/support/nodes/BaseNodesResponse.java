@@ -24,6 +24,7 @@ import org.elasticsearch.action.FailedNodeException;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -44,7 +45,8 @@ public abstract class BaseNodesResponse<TNodeResponse extends BaseNodeResponse> 
     protected BaseNodesResponse() {
     }
 
-    protected BaseNodesResponse(ClusterName clusterName, List<TNodeResponse> nodes, List<FailedNodeException> failures) {
+    protected BaseNodesResponse(ClusterName clusterName, List<TNodeResponse> nodes,
+            List<FailedNodeException> failures) {
         this.clusterName = Objects.requireNonNull(clusterName);
         this.failures = Objects.requireNonNull(failures);
         this.nodes = Objects.requireNonNull(nodes);
@@ -71,7 +73,8 @@ public abstract class BaseNodesResponse<TNodeResponse extends BaseNodeResponse> 
     /**
      * Determine if there are any node failures in {@link #failures}.
      *
-     * @return {@code true} if {@link #failures} contains at least 1 {@link FailedNodeException}.
+     * @return {@code true} if {@link #failures} contains at least 1
+     *         {@link FailedNodeException}.
      */
     public boolean hasFailures() {
         return failures.isEmpty() == false;
@@ -108,15 +111,19 @@ public abstract class BaseNodesResponse<TNodeResponse extends BaseNodeResponse> 
         super.readFrom(in);
         clusterName = new ClusterName(in);
         nodes = readNodesFrom(in);
-        failures = in.readList(FailedNodeException::new);
+        if (in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            failures = in.readList(FailedNodeException::new);
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         clusterName.writeTo(out);
-        writeNodesTo(out, nodes);
-        out.writeList(failures);
+        if (out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            writeNodesTo(out, nodes);
+            out.writeList(failures);
+        }
     }
 
     /**

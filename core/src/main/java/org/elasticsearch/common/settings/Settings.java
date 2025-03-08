@@ -596,7 +596,11 @@ public final class Settings implements ToXContent {
         Builder builder = new Builder();
         int numberOfSettings = in.readVInt();
         for (int i = 0; i < numberOfSettings; i++) {
-            builder.put(in.readString(), in.readOptionalString());
+            if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)){
+                builder.put(in.readString(), in.readOptionalString());
+            }else{
+                builder.put(in.readString(), in.readString());
+            }
         }
         return builder.build();
     }

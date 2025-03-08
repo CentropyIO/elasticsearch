@@ -23,7 +23,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.tasks.TaskAwareRequest;
 import org.elasticsearch.tasks.TaskId;
-
+import org.elasticsearch.Version;
 import java.io.IOException;
 
 /**
@@ -60,12 +60,18 @@ public abstract class TransportRequest extends TransportMessage implements TaskA
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        parentTaskId = TaskId.readFromStream(in);
+        if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            parentTaskId = TaskId.readFromStream(in);
+        }else{
+            parentTaskId = TaskId.EMPTY_TASK_ID;
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        parentTaskId.writeTo(out);
+        if(out.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            parentTaskId.writeTo(out);
+        }
     }
 }

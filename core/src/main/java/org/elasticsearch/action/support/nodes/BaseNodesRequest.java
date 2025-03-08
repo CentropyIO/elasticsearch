@@ -26,7 +26,7 @@ import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.unit.TimeValue;
-
+import org.elasticsearch.Version;
 import java.io.IOException;
 
 /**
@@ -109,7 +109,9 @@ public abstract class BaseNodesRequest<Request extends BaseNodesRequest<Request>
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         nodesIds = in.readStringArray();
-        concreteNodes = in.readOptionalArray(DiscoveryNode::new, DiscoveryNode[]::new);
+        if(in.getVersion().onOrAfter(Version.V_5_0_0_alpha1)) {
+            concreteNodes = in.readOptionalArray(DiscoveryNode::new, DiscoveryNode[]::new);
+        }
         timeout = in.readOptionalWriteable(TimeValue::new);
     }
 
@@ -117,7 +119,11 @@ public abstract class BaseNodesRequest<Request extends BaseNodesRequest<Request>
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeStringArrayNullable(nodesIds);
+        if(out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            out.writeBoolean(false);
+        }else{
         out.writeOptionalArray(concreteNodes);
         out.writeOptionalWriteable(timeout);
+        }
     }
 }

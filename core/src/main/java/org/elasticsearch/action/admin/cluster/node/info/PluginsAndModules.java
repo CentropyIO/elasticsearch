@@ -25,6 +25,7 @@ import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.plugins.PluginInfo;
+import org.elasticsearch.Version;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,14 +45,56 @@ public class PluginsAndModules implements Writeable, ToXContent {
     }
 
     public PluginsAndModules(StreamInput in) throws IOException {
-        this.plugins = Collections.unmodifiableList(in.readList(PluginInfo::new));
-        this.modules = Collections.unmodifiableList(in.readList(PluginInfo::new));
+        if(in.getVersion().before(Version.V_5_0_0_alpha1)){
+            ArrayList<PluginInfo> pluginsList = new ArrayList<>();
+            int pluginsSize = in.readInt();
+            for (int i = 0; i < pluginsSize; i++) {
+                pluginsList.add(new PluginInfo(in));
+            }
+            this.plugins = Collections.unmodifiableList(pluginsList);
+            
+            ArrayList<PluginInfo> modulesList = new ArrayList<>();
+            if (in.getVersion().onOrAfter(Version.V_2_2_0)) {
+                int modulesSize = in.readInt();
+                for (int i = 0; i < modulesSize; i++) {
+                    modulesList.add(new PluginInfo(in));
+                }
+            }
+            this.modules = Collections.unmodifiableList(modulesList);
+        }else{
+            this.plugins = Collections.unmodifiableList(in.readList(PluginInfo::new));
+            this.modules = Collections.unmodifiableList(in.readList(PluginInfo::new));
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeList(plugins);
-        out.writeList(modules);
+        if (out.getVersion().before(Version.V_5_0_0_alpha1)) {
+            if (out.getVersion().before(Version.V_2_2_0)) {
+                // Before 2.2.0, write combined size and then all plugins followed by all modules
+                out.writeInt(plugins.size() + modules.size());
+                for (PluginInfo plugin : getPluginInfos()) {
+                    plugin.writeTo(out);
+                }
+                for (PluginInfo module : getModuleInfos()) {
+                    module.writeTo(out);
+                }
+            } else {
+                // Between 2.2.0 and 5.0.0_alpha1, write plugins and modules separately
+                out.writeInt(plugins.size());
+                for (PluginInfo plugin : getPluginInfos()) {
+                    plugin.writeTo(out);
+                }
+                out.writeInt(modules.size());
+                for (PluginInfo module : getModuleInfos()) {
+                    module.writeTo(out);
+                }
+            }
+        } else {
+            // 5.0.0_alpha1 and later
+            out.writeList(plugins);
+            out.writeList(modules);
+        }
     }
 
     /**
