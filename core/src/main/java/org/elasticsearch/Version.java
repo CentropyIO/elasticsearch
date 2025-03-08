@@ -320,7 +320,7 @@ public class Version {
     public static final int V_2_4_6_ID = 2040699;
     public static final Version V_2_4_6 = new Version(V_2_4_6_ID, true, org.apache.lucene.util.Version.LUCENE_5_5_4);
 
-    public static final Version CURRENT = V_2_4_6;
+    public static Version CURRENT = V_2_4_6;
 
     static {
         assert CURRENT.luceneVersion.equals(Lucene.VERSION) : "Version must be upgraded to [" + Lucene.VERSION + "] is still set to [" + CURRENT.luceneVersion + "]";
@@ -631,6 +631,10 @@ public class Version {
      */
     public static Version smallest(Version version1, Version version2) {
         return version1.id < version2.id ? version1 : version2;
+    }
+
+    public static void setVersion(int version) {
+        CURRENT = fromId(version);
     }
 
     /**

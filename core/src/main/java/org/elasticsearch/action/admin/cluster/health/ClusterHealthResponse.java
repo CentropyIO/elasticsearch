@@ -48,6 +48,12 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
     private TimeValue taskMaxWaitingTime = TimeValue.timeValueMillis(0);
     private boolean timedOut = false;
     private ClusterStateHealth clusterStateHealth;
+    
+    private String level = "cluster";
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
 
     ClusterHealthResponse() {
     }
@@ -316,6 +322,9 @@ public class ClusterHealthResponse extends ActionResponse implements StatusToXCo
         builder.percentageField(Fields.ACTIVE_SHARDS_PERCENT_AS_NUMBER, Fields.ACTIVE_SHARDS_PERCENT, getActiveShardsPercent());
 
         String level = params.param("level", "cluster");
+        if(!level.equals(this.level)){
+            level = this.level;
+        }
         boolean outputIndices = "indices".equals(level) || "shards".equals(level);
 
 
