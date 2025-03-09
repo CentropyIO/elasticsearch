@@ -342,9 +342,12 @@ public class TransportService extends AbstractLifecycleComponent {
         transport.connectToNode(node, connectionProfile, (newConnection, actualProfile) -> {
             // We don't validate cluster names to allow for CCS connections.
             final DiscoveryNode remote = handshake(newConnection, actualProfile.getHandshakeTimeout().millis(), cn -> true).discoveryNode;
+            //removed the check for docker compatibility
+            /* 
             if (node.equals(remote) == false) {
                 throw new ConnectTransportException(node, "handshake failed. unexpected remote node " + remote);
             }
+            */
         });
     }
 
