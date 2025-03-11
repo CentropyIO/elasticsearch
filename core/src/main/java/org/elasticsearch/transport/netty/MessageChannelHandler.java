@@ -171,6 +171,9 @@ public class MessageChannelHandler extends SimpleChannelUpstreamHandler {
         } catch (Throwable e) {
             error = new TransportSerializationException("Failed to deserialize exception response from stream", e);
         }
+        if (error == null) {
+            error = new RemoteTransportException("Unable to deserialize exception response from stream", null);
+        }
         handleException(handler, error);
     }
 
