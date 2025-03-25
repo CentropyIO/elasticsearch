@@ -74,6 +74,12 @@ shadowJar {
     exclude 'META-INF/*.RSA'
     exclude 'META-INF/*.SF'
     
+    manifest {
+        attributes(
+            'Multi-Release': 'true',
+            'Log4jSystemProperties': 'log4j2.disableJvmReflectionCallerClass=true'
+        )
+    }
     
     // Merge Log4j2 configuration files
     transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
